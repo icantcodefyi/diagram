@@ -17,6 +17,8 @@ import { Loader2, Copy, RefreshCw, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DIAGRAM_TYPES, EXAMPLE_SUGGESTIONS, type DiagramType } from "@/types/diagram";
 import { initializeMermaid, renderMermaidDiagram } from "@/lib/mermaid-config";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export function DiagramGenerator() {
   const [input, setInput] = useState("");
@@ -24,6 +26,7 @@ export function DiagramGenerator() {
   const [diagramType, setDiagramType] = useState<DiagramType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isComplex, setIsComplex] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -72,7 +75,7 @@ export function DiagramGenerator() {
       setError("Please enter some text to generate a diagram.");
       return;
     }
-    generateDiagram.mutate({ text: input });
+    generateDiagram.mutate({ text: input, isComplex });
   };
 
   const handleCopyToClipboard = async () => {
@@ -160,6 +163,17 @@ export function DiagramGenerator() {
                 className="min-h-[128px] resize-y"
                 disabled={isLoading}
               />
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="complex-mode"
+                  checked={isComplex}
+                  onCheckedChange={setIsComplex}
+                  disabled={isLoading}
+                />
+                <Label htmlFor="complex-mode" className="text-sm text-muted-foreground cursor-pointer select-none">
+                  Generate detailed and sophisticated diagram
+                </Label>
+              </div>
               {error && (
                 <Alert variant="destructive">
                   <AlertTitle>Error</AlertTitle>
