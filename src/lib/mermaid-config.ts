@@ -1,6 +1,10 @@
 import mermaid from "mermaid";
 
-export const initializeMermaid = () => {
+let initialized = false;
+
+export const initializeMermaid = async () => {
+  if (initialized) return;
+  
   mermaid.initialize({
     startOnLoad: true,
     theme: "default",
@@ -30,6 +34,8 @@ export const initializeMermaid = () => {
       c4ShapeMargin: 20,
     },
   });
+  
+  initialized = true;
 };
 
 export const validateDiagram = async (diagram: string): Promise<boolean> => {
@@ -47,27 +53,29 @@ export const renderMermaidDiagram = async (diagram: string, elementId: string) =
   if (!element) return;
 
   try {
-    // Validate the diagram first
-    const isValid = await validateDiagram(diagram);
-    if (!isValid) {
-      throw new Error('Invalid diagram syntax');
-    }
-
+    // Ensure Mermaid is initialized
+    await initializeMermaid();
+    
+    // Generate a unique ID for this render
+    const uniqueId = `mermaid-${Date.now()}`;
+    
     // Clear previous content
-    element.innerHTML = "";
-
-    // Create a new div for the diagram
-    const diagramDiv = document.createElement("div");
-    diagramDiv.className = "mermaid";
-    diagramDiv.textContent = diagram;
-
-    // Add the new div to the container
-    element.appendChild(diagramDiv);
-
-    // Render the diagram
-    await mermaid.run({
-      nodes: [diagramDiv],
-    });
+    element.innerHTML = '';
+    
+    try {
+      // First try to parse the diagram
+      await mermaid.parse(diagram);
+      
+      // If parsing succeeds, render the diagram
+      const { svg } = await mermaid.render(uniqueId, diagram);
+      
+      if (svg) {
+        element.innerHTML = svg;
+      }
+    } catch (parseError) {
+      console.error('Mermaid parse error:', parseError);
+      throw parseError;
+    }
   } catch (error) {
     console.error('Failed to render diagram:', error);
     throw error;

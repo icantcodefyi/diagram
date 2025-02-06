@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/texturebutton";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, Copy, RefreshCw, Download } from "lucide-react";
+import { Loader, Copy, RefreshCw, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DIAGRAM_TYPES, EXAMPLE_SUGGESTIONS, type DiagramType } from "@/types/diagram";
 import { initializeMermaid, renderMermaidDiagram } from "@/lib/mermaid-config";
@@ -30,7 +30,8 @@ export function DiagramGenerator() {
   const { toast } = useToast();
 
   useEffect(() => {
-    initializeMermaid();
+    // Initialize Mermaid when component mounts
+    void initializeMermaid();
   }, []);
 
   // Initialize mutation
@@ -38,6 +39,11 @@ export function DiagramGenerator() {
     onMutate: () => {
       setIsLoading(true);
       setError(null);
+      // Clear previous diagram before generating new one
+      const element = document.querySelector("#mermaid-diagram");
+      if (element) {
+        element.innerHTML = "";
+      }
     },
     onSettled: () => {
       setIsLoading(false);
@@ -46,17 +52,22 @@ export function DiagramGenerator() {
       try {
         setDiagram(data.diagram);
         setDiagramType(data.type);
+        
+        // Add a small delay to ensure DOM is ready
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Render the new diagram
+        await renderMermaidDiagram(data.diagram, "#mermaid-diagram");
+
         toast({
           title: "Success",
           description: data.message,
           variant: "default",
           duration: 3000,
         });
-
-        await renderMermaidDiagram(data.diagram, "#mermaid-diagram");
       } catch (err) {
-        setError("Failed to render diagram. Please try again with a simpler description.");
         console.error("Mermaid render error:", err);
+        setError("Failed to render diagram. Please try again with a simpler description.");
       }
     },
     onError: (err) => {
@@ -199,7 +210,7 @@ export function DiagramGenerator() {
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
                     Generating
                   </>
                 ) : (
@@ -225,7 +236,7 @@ export function DiagramGenerator() {
           </CardHeader>
           <CardContent>
             <div className="rounded-lg bg-white p-4 dark:bg-slate-900">
-              <div id="mermaid-diagram" className="overflow-x-auto"></div>
+              <div id="mermaid-diagram" className="overflow-x-auto flex justify-center"></div>
             </div>
           </CardContent>
           <CardFooter className="flex justify-end gap-2">
