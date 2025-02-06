@@ -7,7 +7,6 @@ import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
 import {
   determineDiagramType,
   generateDiagramWithAI,
-  isValidMermaidDiagram,
 } from "@/lib/ai-utils";
 
 export const aiRouter = createTRPCRouter({
@@ -49,10 +48,8 @@ export const aiRouter = createTRPCRouter({
               throw new Error("Invalid response format from AI");
             }
 
-            if (isValidMermaidDiagram(mermaidCode)) {
-              validDiagram = mermaidCode;
-              break;
-            }
+            validDiagram = mermaidCode;
+            break;
           } catch (err) {
             error = err instanceof Error ? err : new Error("Unknown error occurred");
             console.error("Error generating diagram:", error);

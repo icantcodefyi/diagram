@@ -154,16 +154,7 @@ export function DiagramGenerator() {
 
   return (
     <div className="container max-w-4xl space-y-6 py-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-center text-2xl">
-            AI Diagram Generator
-          </CardTitle>
-          <CardDescription className="text-center">
-            Describe what you want to diagram and I&apos;ll create it using Mermaid.js. 
-            Supports {Object.keys(DIAGRAM_TYPES).length} different diagram types!
-          </CardDescription>
-        </CardHeader>
+      <Card className="shadow-none border-none">
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">

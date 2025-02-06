@@ -11,38 +11,6 @@ interface DiagramTypeResponse {
   reasoning: string;
 }
 
-// Function to do basic syntax validation of a Mermaid diagram
-export const isValidMermaidDiagram = (diagram: string): boolean => {
-  try {
-    // Basic syntax validation
-    if (!diagram || typeof diagram !== "string") {
-      return false;
-    }
-
-    // Check if the diagram starts with a valid diagram type
-    const validStartKeywords = [
-      "graph",
-      "flowchart",
-      "sequenceDiagram",
-      "classDiagram",
-      "stateDiagram",
-      "erDiagram",
-      "journey",
-      "gantt",
-      "pie",
-      "quadrantChart",
-      "requirementDiagram",
-      "gitGraph",
-    ];
-
-    const firstLine = diagram.trim().split("\n")[0]?.trim() ?? "";
-    return validStartKeywords.some((keyword) => firstLine.startsWith(keyword));
-  } catch (error) {
-    console.warn("Basic diagram validation failed:", error);
-    return false;
-  }
-};
-
 // Function to remove style definitions from Mermaid diagram
 export const removeStyles = (diagram: string): string => {
   return diagram
@@ -61,6 +29,61 @@ export const formatDiagramCode = (code: string): string => {
     .replace(/^\s*[\r\n]/gm, "")
     .trim();
 };
+
+// Rate limiting configuration
+const RATE_LIMIT = {
+  minDelay: 1000, // Minimum delay between requests in ms
+  maxDelay: 30000, // Maximum delay for exponential backoff
+  initialDelay: 2000, // Initial delay for rate limiting
+};
+
+// Queue for managing API requests
+const requestQueue: Array<() => Promise<void>> = [];
+let isProcessingQueue = false;
+
+// Sleep utility function
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Process the request queue
+async function processQueue() {
+  if (isProcessingQueue || requestQueue.length === 0) return;
+  
+  isProcessingQueue = true;
+  while (requestQueue.length > 0) {
+    const request = requestQueue.shift();
+    if (request) {
+      await request();
+      await sleep(RATE_LIMIT.minDelay); // Ensure minimum delay between requests
+    }
+  }
+  isProcessingQueue = false;
+}
+
+// Wrapper for API calls with exponential backoff
+async function makeAPIRequestWithRetry<T>(
+  apiCall: () => Promise<T>,
+  attempt = 0,
+  maxAttempts = 5
+): Promise<T> {
+  try {
+    return await apiCall();
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes("429") &&
+      attempt < maxAttempts
+    ) {
+      const delay = Math.min(
+        RATE_LIMIT.maxDelay,
+        RATE_LIMIT.initialDelay * Math.pow(2, attempt)
+      );
+      console.log(`Rate limited. Retrying in ${delay}ms...`);
+      await sleep(delay);
+      return makeAPIRequestWithRetry(apiCall, attempt + 1, maxAttempts);
+    }
+    throw error;
+  }
+}
 
 // Function to determine the best diagram type using AI
 export const determineDiagramType = async (
@@ -90,35 +113,45 @@ Respond in this exact JSON format:
   "reasoning": "brief explanation why this type is best suited for this visualization"
 }`;
 
-  try {
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
+  return new Promise((resolve, reject) => {
+    const request = async () => {
+      try {
+        const result = await makeAPIRequestWithRetry(async () => {
+          const response = await model.generateContent(prompt);
+          return response;
+        });
+        
+        const response = result.response;
+        const responseText = response.text();
 
-    if (typeof text !== "string") {
-      throw new Error("Invalid response from AI model");
-    }
+        if (typeof responseText !== "string") {
+          throw new Error("Invalid response from AI model");
+        }
 
-    try {
-      // Remove markdown code block syntax if present
-      const cleanText = text.replace(/^```json\n|\n```$/g, '').trim();
-      const parsed = JSON.parse(cleanText) as DiagramTypeResponse;
-      if (
-        parsed.type &&
-        typeof parsed.type === "string" &&
-        Object.prototype.hasOwnProperty.call(DIAGRAM_TYPES, parsed.type)
-      ) {
-        return parsed.type as DiagramType;
+        try {
+          const cleanText = responseText.replace(/^```json\n|\n```$/g, '').trim();
+          const parsed = JSON.parse(cleanText) as DiagramTypeResponse;
+          if (
+            parsed.type &&
+            typeof parsed.type === "string" &&
+            Object.prototype.hasOwnProperty.call(DIAGRAM_TYPES, parsed.type)
+          ) {
+            resolve(parsed.type as DiagramType);
+            return;
+          }
+        } catch (e) {
+          console.error("Failed to parse diagram type response:", e);
+        }
+        resolve("flowchart"); // Default fallback
+      } catch (error) {
+        console.error("Error determining diagram type:", error);
+        resolve("flowchart"); // Default fallback on error
       }
-    } catch (e) {
-      console.error("Failed to parse diagram type response:", e);
-    }
-  } catch (error) {
-    console.error("Error determining diagram type:", error);
-  }
+    };
 
-  // Default to flowchart if AI suggestion fails
-  return "flowchart";
+    requestQueue.push(request);
+    void processQueue();
+  });
 };
 
 // Function to get syntax documentation for a diagram type
@@ -210,25 +243,36 @@ ${
 - No styling or decorations`
 }`;
 
-  try {
-    const result = await model.generateContent(prompt);
-    const response = result.response;
+  return new Promise((resolve, reject) => {
+    const request = async () => {
+      try {
+        const result = await makeAPIRequestWithRetry(async () => {
+          const response = await model.generateContent(prompt);
+          return response;
+        });
 
-    if (!response?.text) {
-      throw new Error("Invalid or empty response from AI model");
-    }
+        const response = result.response;
 
-    const responseText = response.text();
-    if (typeof responseText !== "string") {
-      throw new Error("Invalid response format from AI model");
-    }
+        if (!response?.text) {
+          throw new Error("Invalid or empty response from AI model");
+        }
 
-    let mermaidCode = formatDiagramCode(responseText);
-    mermaidCode = removeStyles(mermaidCode);
+        const responseText = response.text();
+        if (typeof responseText !== "string") {
+          throw new Error("Invalid response format from AI model");
+        }
 
-    return mermaidCode;
-  } catch (error) {
-    console.error("Error generating diagram:", error);
-    throw error;
-  }
+        let mermaidCode = formatDiagramCode(responseText);
+        mermaidCode = removeStyles(mermaidCode);
+
+        resolve(mermaidCode);
+      } catch (error) {
+        console.error("Error generating diagram:", error);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      }
+    };
+
+    requestQueue.push(request);
+    void processQueue();
+  });
 };
