@@ -100,7 +100,9 @@ Respond in this exact JSON format:
     }
 
     try {
-      const parsed = JSON.parse(text) as DiagramTypeResponse;
+      // Remove markdown code block syntax if present
+      const cleanText = text.replace(/^```json\n|\n```$/g, '').trim();
+      const parsed = JSON.parse(cleanText) as DiagramTypeResponse;
       if (
         parsed.type &&
         typeof parsed.type === "string" &&
