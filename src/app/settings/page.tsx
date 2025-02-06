@@ -6,6 +6,29 @@ import { useEffect } from "react";
 import { api } from "@/trpc/react";
 import { useDiagramStore } from "@/store/diagram-store";
 import type { Diagram } from "@/store/diagram-store";
+import { DiagramPreviewCard } from "@/app/_components/diagram-preview-card";
+
+interface DbDiagram {
+  id: string;
+  content: string;
+  type: string;
+  name: string | null;
+  isComplex: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function convertDbDiagramToStoreDiagram(dbDiagram: DbDiagram): Diagram {
+  return {
+    id: dbDiagram.id,
+    content: dbDiagram.content,
+    type: dbDiagram.type,
+    name: dbDiagram.name ?? undefined,
+    isComplex: dbDiagram.isComplex,
+    createdAt: new Date(dbDiagram.createdAt),
+    updatedAt: new Date(dbDiagram.updatedAt),
+  };
+}
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
@@ -34,15 +57,9 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (diagrams) {
-      const typedDiagrams: Diagram[] = diagrams.map((d) => ({
-        id: d.id,
-        content: d.content,
-        type: d.type,
-        name: d.name ?? undefined,
-        isComplex: d.isComplex,
-        createdAt: new Date(d.createdAt),
-        updatedAt: new Date(d.updatedAt),
-      }));
+      const typedDiagrams: Diagram[] = diagrams.map((d: DbDiagram) => 
+        convertDbDiagramToStoreDiagram(d)
+      );
       setDiagrams(typedDiagrams);
     }
   }, [diagrams, setDiagrams]);
@@ -79,26 +96,13 @@ export default function SettingsPage() {
 
       <div>
         <h2 className="mb-4 text-2xl font-semibold">Your Diagrams</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {diagrams && diagrams.length > 0 ? (
-            diagrams.map((diagram) => (
-              <div
-                key={diagram.id}
-                className="rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800"
-              >
-                <h3 className="mb-2 font-semibold">
-                  {diagram.name ?? `${diagram.type} Diagram`}
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Type: {diagram.type}
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Created: {new Date(diagram.createdAt).toLocaleDateString()}
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Complexity: {diagram.isComplex ? "Complex" : "Simple"}
-                </p>
-              </div>
+            diagrams.map((diagram: DbDiagram) => (
+              <DiagramPreviewCard 
+                key={diagram.id} 
+                diagram={convertDbDiagramToStoreDiagram(diagram)} 
+              />
             ))
           ) : (
             <p className="col-span-full text-center text-gray-600 dark:text-gray-400">

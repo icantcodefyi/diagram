@@ -1,6 +1,7 @@
 import mermaid from "mermaid";
 
 let initialized = false;
+const svgCache = new Map<string, string>();
 
 export const initializeMermaid = async () => {
   if (initialized) return;
@@ -56,6 +57,15 @@ export const renderMermaidDiagram = async (diagram: string, elementId: string) =
     // Ensure Mermaid is initialized
     await initializeMermaid();
     
+    // Check cache first
+    const cacheKey = `${diagram}-${elementId}`;
+    const cachedSvg = svgCache.get(cacheKey);
+    
+    if (cachedSvg) {
+      element.innerHTML = cachedSvg;
+      return;
+    }
+    
     // Generate a unique ID for this render
     const uniqueId = `mermaid-${Date.now()}`;
     
@@ -63,14 +73,13 @@ export const renderMermaidDiagram = async (diagram: string, elementId: string) =
     element.innerHTML = '';
     
     try {
-      // First try to parse the diagram
-      await mermaid.parse(diagram);
-      
       // If parsing succeeds, render the diagram
       const { svg } = await mermaid.render(uniqueId, diagram);
       
       if (svg) {
         element.innerHTML = svg;
+        // Cache the result
+        svgCache.set(cacheKey, svg);
       }
     } catch (parseError) {
       console.error('Mermaid parse error:', parseError);

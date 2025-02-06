@@ -21,7 +21,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@auth/prisma-adapter": "^2.7.4",
+    "@auth/prisma-adapter": "^2.7.2",
     "@google/generative-ai": "^0.21.0",
     "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "^5.14.0",
@@ -67,7 +67,7 @@
     "lucide-react": "^0.474.0",
     "mermaid": "^11.4.1",
     "next": "^15.0.1",
-    "next-auth": "^4.24.11",
+    "next-auth": "5.0.0-beta.25",
     "next-themes": "^0.4.4",
     "react": "^18.3.1",
     "react-day-picker": "8.10.1",
@@ -81,7 +81,7 @@
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
-    "zod": "^3.24.1",
+    "zod": "^3.23.3",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
