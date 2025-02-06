@@ -224,7 +224,7 @@ export function DiagramGenerator() {
             )}
           </CardHeader>
           <CardContent>
-            <div className="rounded-lg border bg-white p-4 dark:bg-slate-900">
+            <div className="rounded-lg bg-white p-4 dark:bg-slate-900">
               <div id="mermaid-diagram" className="overflow-x-auto"></div>
             </div>
           </CardContent>
