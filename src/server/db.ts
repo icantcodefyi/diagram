@@ -15,3 +15,10 @@ const globalForPrisma = globalThis as unknown as {
 export const db = globalForPrisma.prisma ?? createPrismaClient();
 
 if (env.NODE_ENV !== "production") globalForPrisma.prisma = db;
+
+// Run the schema push in development
+if (env.NODE_ENV === "development") {
+  void db.$connect().then(() => {
+    console.log("Connected to database");
+  });
+}

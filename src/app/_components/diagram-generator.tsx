@@ -170,6 +170,16 @@ export function DiagramGenerator() {
                 placeholder={`Example: ${EXAMPLE_SUGGESTIONS[diagramType ?? "flowchart"]}`}
                 className="min-h-[128px] resize-y"
                 disabled={isLoading}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    if (!e.shiftKey) {
+                      e.preventDefault();
+                      if (!isLoading && input.trim()) {
+                        void handleSubmit(e);
+                      }
+                    }
+                  }
+                }}
               />
               <div className="flex items-center space-x-2">
                 <Switch
