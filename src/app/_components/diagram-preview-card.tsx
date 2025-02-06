@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, Expand, Copy } from "lucide-react";
@@ -12,6 +12,10 @@ import { useToast } from "@/hooks/use-toast";
 export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    void renderMermaidDiagram(diagram.content, `#diagram-${diagram.id}`);
+  }, [diagram.content, diagram.id]);
 
   const handleCopyCode = async () => {
     try {
@@ -32,18 +36,27 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
     }
   };
 
-  const handleDownloadSVG = async () => {
+  const handleDownloadPNG = async () => {
     try {
-      const element = document.querySelector(`#diagram-${diagram.id} svg`);
-      if (!element) throw new Error("No diagram found");
+      const response = await fetch('/api/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: diagram.content,
+          type: diagram.type,
+        }),
+      });
 
-      const svgData = new XMLSerializer().serializeToString(element);
-      const blob = new Blob([svgData], { type: "image/svg+xml" });
+      if (!response.ok) throw new Error('Export failed');
+
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${diagram.name ?? diagram.type}-diagram-${diagram.id}.svg`;
+      link.download = `${diagram.name ?? diagram.type}-diagram-${diagram.id}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -51,7 +64,7 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
 
       toast({
         title: "Success",
-        description: "Diagram downloaded as SVG",
+        description: "Diagram downloaded as PNG",
         variant: "default",
         duration: 2000,
       });
@@ -82,9 +95,6 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
           <div 
             id={`diagram-${diagram.id}`} 
             className="w-full h-[200px] flex items-center justify-center bg-muted/30 rounded-md overflow-hidden"
-            onMouseEnter={() => {
-              void renderMermaidDiagram(diagram.content, `#diagram-${diagram.id}`);
-            }}
           />
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-200" />
           <div className="absolute bottom-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -99,7 +109,7 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
             <Button
               variant="secondary"
               size="icon"
-              onClick={handleDownloadSVG}
+              onClick={handleDownloadPNG}
               className="h-8 w-8"
             >
               <Download className="h-4 w-4" />

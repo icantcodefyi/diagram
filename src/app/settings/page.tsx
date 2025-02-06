@@ -7,6 +7,10 @@ import { api } from "@/trpc/react";
 import { useDiagramStore } from "@/store/diagram-store";
 import type { Diagram } from "@/store/diagram-store";
 import { DiagramPreviewCard } from "@/app/_components/diagram-preview-card";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowLeft } from "lucide-react";
 
 interface DbDiagram {
   id: string;
@@ -35,19 +39,15 @@ export default function SettingsPage() {
   const router = useRouter();
   const { setDiagrams, setCredits } = useDiagramStore();
 
-  const { data: diagrams, isLoading: diagramsLoading } = api.ai.getUserDiagrams.useQuery(
-    undefined,
-    {
+  const { data: diagrams, isLoading: diagramsLoading } =
+    api.ai.getUserDiagrams.useQuery(undefined, {
       enabled: !!session,
-    }
-  );
+    });
 
-  const { data: credits, isLoading: creditsLoading } = api.ai.getUserCredits.useQuery(
-    undefined,
-    {
+  const { data: credits, isLoading: creditsLoading } =
+    api.ai.getUserCredits.useQuery(undefined, {
       enabled: !!session,
-    }
-  );
+    });
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -57,8 +57,8 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (diagrams) {
-      const typedDiagrams: Diagram[] = diagrams.map((d: DbDiagram) => 
-        convertDbDiagramToStoreDiagram(d)
+      const typedDiagrams: Diagram[] = diagrams.map((d: DbDiagram) =>
+        convertDbDiagramToStoreDiagram(d),
       );
       setDiagrams(typedDiagrams);
     }
@@ -71,7 +71,17 @@ export default function SettingsPage() {
   }, [credits, setCredits]);
 
   if (status === "loading" || diagramsLoading || creditsLoading) {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+    return (
+      <div className="mx-auto max-w-5xl space-y-4 p-4">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-24 w-full" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-48 w-full" />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (!session) {
@@ -79,38 +89,59 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="mb-8 text-3xl font-bold">Settings</h1>
-      
+    <div className="mx-auto max-w-5xl p-4">
       <div className="mb-8">
-        <h2 className="mb-4 text-2xl font-semibold">Your Credits</h2>
-        <div className="rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800">
-          <p className="text-lg">
-            Available Credits: <span className="font-bold">{credits?.credits ?? 0}</span>
-          </p>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Credits reset daily. Simple diagrams cost 1 credit, complex diagrams cost 2 credits.
-          </p>
-        </div>
+        <Button
+          variant="link"
+          onClick={() => router.push("/")}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
       </div>
 
-      <div>
-        <h2 className="mb-4 text-2xl font-semibold">Your Diagrams</h2>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {diagrams && diagrams.length > 0 ? (
-            diagrams.map((diagram: DbDiagram) => (
-              <DiagramPreviewCard 
-                key={diagram.id} 
-                diagram={convertDbDiagramToStoreDiagram(diagram)} 
-              />
-            ))
-          ) : (
-            <p className="col-span-full text-center text-gray-600 dark:text-gray-400">
-              You haven&apos;t generated any diagrams yet.
-            </p>
-          )}
-        </div>
+      <div className="space-y-8 px-8">
+        <h1 className="text-2xl font-medium">Settings</h1>
+        <section>
+          <h2 className="mb-4 text-lg font-medium">Credits</h2>
+          <Card className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-medium">{credits?.credits ?? 0}</p>
+                <p className="text-sm text-gray-500">Available Credits</p>
+              </div>
+              <p className="text-sm text-gray-500">
+                Simple: 1 credit
+                <br />
+                Complex: 2 credits
+                <br />
+                Resets daily
+              </p>
+            </div>
+          </Card>
+        </section>
+
+        <section>
+          <h2 className="mb-4 text-lg font-medium">Your Diagrams</h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {diagrams && diagrams.length > 0 ? (
+              diagrams.map((diagram: DbDiagram) => (
+                <DiagramPreviewCard
+                  key={diagram.id}
+                  diagram={convertDbDiagramToStoreDiagram(diagram)}
+                />
+              ))
+            ) : (
+              <Card className="col-span-full p-6 text-center">
+                <p className="mb-4 text-gray-500">No diagrams yet</p>
+                <Button onClick={() => router.push("/")}>
+                  Create Your First Diagram
+                </Button>
+              </Card>
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );
-} 
+}

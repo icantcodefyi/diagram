@@ -8,7 +8,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Copy } from "lucide-react";
+import { Copy, Download, ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { type Diagram } from "@/store/diagram-store";
 import { renderMermaidDiagram } from "@/lib/mermaid-config";
 import { useToast } from "@/hooks/use-toast";
@@ -28,13 +35,17 @@ export function DiagramPreviewModal({
 
   useEffect(() => {
     if (isOpen) {
-      // Render diagram when modal opens
-      void renderMermaidDiagram(
-        diagram.content,
-        `#modal-diagram-${diagram.id}`,
-      );
+      // Wait for the modal to be fully rendered before rendering the diagram
+      const timer = setTimeout(() => {
+        void renderMermaidDiagram(
+          diagram.content,
+          `#modal-diagram-${diagram.id}`,
+        );
+      }, 100);
+
+      return () => clearTimeout(timer);
     }
-  }, [isOpen, diagram]);
+  }, [isOpen, diagram.content, diagram.id]);
 
   const handleCopyCode = async () => {
     try {
@@ -49,6 +60,48 @@ export function DiagramPreviewModal({
       toast({
         title: "Error",
         description: "Failed to copy code to clipboard",
+        variant: "destructive",
+        duration: 2000,
+      });
+    }
+  };
+
+  const handleDownloadPNG = async () => {
+    try {
+      const response = await fetch('/api/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: diagram.content,
+          type: diagram.type,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Export failed');
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${diagram.name ?? diagram.type}-diagram-${diagram.id}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "Diagram downloaded as PNG",
+        variant: "default",
+        duration: 2000,
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to download diagram",
         variant: "destructive",
         duration: 2000,
       });
@@ -116,15 +169,24 @@ export function DiagramPreviewModal({
               <Copy className="h-4 w-4" />
               Copy Code
             </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleDownloadSVG}
-              className="gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Download SVG
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="sm" className="gap-2">
+                  <Download className="h-4 w-4" />
+                  Download
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleDownloadPNG}>
+                  Save as PNG
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleDownloadSVG}>
+                  Save as SVG
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </DialogContent>
