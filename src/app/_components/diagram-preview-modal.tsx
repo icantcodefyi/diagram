@@ -39,7 +39,7 @@ export function DiagramPreviewModal({
       const timer = setTimeout(() => {
         void renderMermaidDiagram(
           diagram.content,
-          `#modal-diagram-${diagram.id}`,
+          `modal-diagram-${diagram.id}`,
         );
       }, 100);
 
@@ -143,8 +143,8 @@ export function DiagramPreviewModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl ">
-        <DialogHeader>
+      <DialogContent className="max-w-[95vw] max-h-[95vh] w-[1200px] p-6 overflow-auto flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>
             {diagram.name ?? `${diagram.type} Diagram`}
           </DialogTitle>
@@ -158,7 +158,9 @@ export function DiagramPreviewModal({
           <div
             id={`modal-diagram-${diagram.id}`}
             className="w-full min-h-[400px] flex items-center justify-center bg-muted/30 rounded-md overflow-hidden p-4"
-          />
+          >
+            {/* Container for the Mermaid diagram */}
+          </div>
           <div className="absolute top-4 right-4 flex items-center gap-2">
             <Button
               variant="secondary"

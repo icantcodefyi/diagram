@@ -66,8 +66,8 @@ export const renderMermaidDiagram = async (diagram: string, elementId: string) =
       return;
     }
     
-    // Generate a unique ID for this render
-    const uniqueId = `mermaid-${Date.now()}`;
+    // Generate a unique ID for this render using elementId to ensure uniqueness
+    const uniqueId = `mermaid-${elementId.replace(/[^a-zA-Z0-9]/g, '')}-${Math.random().toString(36).substr(2, 9)}`;
     
     // Clear previous content
     element.innerHTML = '';

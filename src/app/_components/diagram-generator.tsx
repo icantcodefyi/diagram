@@ -262,6 +262,7 @@ export function DiagramGenerator() {
               </Button>
               <Button
                 type="submit"
+                variant="accent"
                 disabled={isLoading || !input.trim()}
                 className="min-w-[140px]"
               >

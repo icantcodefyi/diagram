@@ -3,15 +3,48 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Expand, Copy } from "lucide-react";
+import { Download, Expand, Copy, Trash2 } from "lucide-react";
 import { type Diagram } from "@/store/diagram-store";
 import { DiagramPreviewModal } from "./diagram-preview-modal";
 import { renderMermaidDiagram } from "@/lib/mermaid-config";
 import { useToast } from "@/hooks/use-toast";
+import { api } from "@/trpc/react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
+  const utils = api.useUtils();
+
+  const deleteDiagram = api.ai.deleteDiagram.useMutation({
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Diagram deleted successfully",
+        variant: "default",
+        duration: 2000,
+      });
+      void utils.ai.getUserDiagrams.invalidate();
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete diagram",
+        variant: "destructive",
+        duration: 2000,
+      });
+    },
+  });
 
   useEffect(() => {
     void renderMermaidDiagram(diagram.content, `#diagram-${diagram.id}`);
@@ -101,6 +134,14 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
             <Button
               variant="secondary"
               size="icon"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              className="h-8 w-8"
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+            <Button
+              variant="secondary"
+              size="icon"
               onClick={handleCopyCode}
               className="h-8 w-8"
             >
@@ -131,6 +172,29 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
       />
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your diagram.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                deleteDiagram.mutate({ diagramId: diagram.id });
+                setIsDeleteDialogOpen(false);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 } 

@@ -40,48 +40,40 @@ export const aiRouter = createTRPCRouter({
             });
           }
         } else {
-          // Check and update user credits
+          // Check user credits
           const userCredits = await db.userCredits.findUnique({
             where: { userId: ctx.session.user.id },
           });
 
+          const requiredCredits = input.isComplex ? 2 : 1;
+
           if (!userCredits) {
             // Create initial credits if first time
-            await db.userCredits.create({
-              data: {
-                userId: ctx.session.user.id,
-                credits: 9, // 10 - cost of current generation
-              },
-            });
+            if (requiredCredits > 10) { // Initial credits are 10
+              throw new TRPCError({
+                code: "FORBIDDEN",
+                message: "Insufficient credits",
+              });
+            }
           } else {
             // Check if credits need to be reset
             const lastReset = userCredits.lastCreditReset;
             const now = new Date();
             if (lastReset.getDate() !== now.getDate()) {
-              await db.userCredits.update({
-                where: { userId: ctx.session.user.id },
-                data: {
-                  credits: 9, // 10 - cost of current generation
-                  lastCreditReset: now,
-                },
-              });
+              if (requiredCredits > 10) { // Daily credits are 10
+                throw new TRPCError({
+                  code: "FORBIDDEN",
+                  message: "Insufficient credits",
+                });
+              }
             } else {
               // Check if user has enough credits
-              const requiredCredits = input.isComplex ? 2 : 1;
               if (userCredits.credits < requiredCredits) {
                 throw new TRPCError({
                   code: "FORBIDDEN",
                   message: "Insufficient credits",
                 });
               }
-
-              // Deduct credits
-              await db.userCredits.update({
-                where: { userId: ctx.session.user.id },
-                data: {
-                  credits: userCredits.credits - requiredCredits,
-                },
-              });
             }
           }
         }
@@ -132,7 +124,47 @@ export const aiRouter = createTRPCRouter({
           });
         }
 
-        // Store the diagram
+        // Only deduct credits and store diagram after successful generation
+        if (ctx.session?.user) {
+          const userCredits = await db.userCredits.findUnique({
+            where: { userId: ctx.session.user.id },
+          });
+
+          const requiredCredits = input.isComplex ? 2 : 1;
+          const now = new Date();
+
+          if (!userCredits) {
+            // Create initial credits if first time
+            await db.userCredits.create({
+              data: {
+                userId: ctx.session.user.id,
+                credits: 10 - requiredCredits,
+                lastCreditReset: now,
+              },
+            });
+          } else {
+            // Check if credits need to be reset
+            if (userCredits.lastCreditReset.getDate() !== now.getDate()) {
+              await db.userCredits.update({
+                where: { userId: ctx.session.user.id },
+                data: {
+                  credits: 10 - requiredCredits,
+                  lastCreditReset: now,
+                },
+              });
+            } else {
+              // Deduct credits
+              await db.userCredits.update({
+                where: { userId: ctx.session.user.id },
+                data: {
+                  credits: userCredits.credits - requiredCredits,
+                },
+              });
+            }
+          }
+        }
+
+        // Store the diagram after successful generation
         const diagram = await db.diagram.create({
           data: {
             content: validDiagram,
@@ -181,5 +213,39 @@ export const aiRouter = createTRPCRouter({
         },
       });
       return credits;
+    }),
+
+  deleteDiagram: protectedProcedure
+    .input(
+      z.object({
+        diagramId: z.string().min(1, "Diagram ID is required"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // First check if the diagram exists and belongs to the user
+      const diagram = await db.diagram.findFirst({
+        where: {
+          id: input.diagramId,
+          userId: ctx.session.user.id,
+        },
+      });
+
+      if (!diagram) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Diagram not found or you don't have permission to delete it",
+        });
+      }
+
+      // Delete the diagram
+      await db.diagram.delete({
+        where: {
+          id: input.diagramId,
+        },
+      });
+
+      return {
+        message: "Diagram deleted successfully",
+      };
     }),
 });
