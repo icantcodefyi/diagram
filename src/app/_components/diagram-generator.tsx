@@ -13,12 +13,19 @@ import {
 import { Button } from "@/components/ui/texturebutton";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader, Copy, RefreshCw, Download } from "lucide-react";
+import { Loader, Copy, RefreshCw, Download, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DIAGRAM_TYPES, EXAMPLE_SUGGESTIONS, type DiagramType } from "@/types/diagram";
 import { initializeMermaid, renderMermaidDiagram } from "@/lib/mermaid-config";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function DiagramGenerator() {
   const [input, setInput] = useState("");
@@ -109,6 +116,49 @@ export function DiagramGenerator() {
       toast({
         title: "Error",
         description: "Failed to copy to clipboard",
+        variant: "destructive",
+        duration: 2000,
+      });
+    }
+  };
+
+  const handleDownloadPNG = async () => {
+    try {
+      const response = await fetch('/api/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: diagram,
+          type: diagramType,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Export failed');
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `diagram-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "Diagram downloaded as PNG",
+        variant: "default",
+        duration: 2000,
+      });
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Error",
+        description: "Failed to download diagram",
         variant: "destructive",
         duration: 2000,
       });
@@ -259,11 +309,11 @@ export function DiagramGenerator() {
             <Button
               variant="secondary"
               size="sm"
-              onClick={handleDownloadSVG}
+              onClick={handleDownloadPNG}
               className="text-sm"
             >
               <Download className="mr-2 h-4 w-4" />
-              Download SVG
+              Download PNG
             </Button>
           </CardFooter>
         </Card>
