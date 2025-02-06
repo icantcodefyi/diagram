@@ -18,8 +18,9 @@ interface DbDiagram {
   type: string;
   name: string | null;
   isComplex: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string | null;
 }
 
 function convertDbDiagramToStoreDiagram(dbDiagram: DbDiagram): Diagram {
@@ -29,8 +30,8 @@ function convertDbDiagramToStoreDiagram(dbDiagram: DbDiagram): Diagram {
     type: dbDiagram.type,
     name: dbDiagram.name ?? undefined,
     isComplex: dbDiagram.isComplex,
-    createdAt: new Date(dbDiagram.createdAt),
-    updatedAt: new Date(dbDiagram.updatedAt),
+    createdAt: dbDiagram.createdAt,
+    updatedAt: dbDiagram.updatedAt,
   };
 }
 
