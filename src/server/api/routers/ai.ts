@@ -15,6 +15,7 @@ export const aiRouter = createTRPCRouter({
       z.object({
         text: z.string().min(1, "Please provide text to generate a diagram"),
         isComplex: z.boolean().optional().default(false),
+        previousError: z.string().optional(),
       }),
     )
     .mutation(async ({ input }) => {
@@ -41,6 +42,7 @@ export const aiRouter = createTRPCRouter({
               suggestedType,
               attempts,
               input.isComplex,
+              input.previousError,
             );
 
             // Ensure we have a string response

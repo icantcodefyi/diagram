@@ -67,7 +67,13 @@ export function DiagramGenerator() {
         });
       } catch (err) {
         console.error("Mermaid render error:", err);
-        setError("Failed to render diagram. Please try again with a simpler description.");
+        const errorMessage = err instanceof Error ? err.message : "Unknown error";
+        setError(errorMessage);
+        generateDiagram.mutate({ 
+          text: input, 
+          isComplex,
+          previousError: errorMessage 
+        });
       }
     },
     onError: (err) => {

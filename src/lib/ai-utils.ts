@@ -24,10 +24,26 @@ export const removeStyles = (diagram: string): string => {
 
 // Function to sanitize and format the diagram code
 export const formatDiagramCode = (code: string): string => {
-  return code
-    .replace(/```mermaid\n?|\n?```/g, "")
-    .replace(/^\s*[\r\n]/gm, "")
-    .trim();
+  // Remove code block markers
+  let formattedCode = code.replace(/```mermaid\n?|\n?```/g, "").trim();
+
+  // Handle potential duplicate diagram type declarations
+  const diagramTypes = [
+    "mindmap",
+    "flowchart",
+    "sequenceDiagram",
+    "classDiagram",
+    "erDiagram",
+    "gantt",
+    "pie",
+  ];
+  for (const type of diagramTypes) {
+    const regex = new RegExp(`${type}\\s+${type}`, "g");
+    formattedCode = formattedCode.replace(regex, type);
+  }
+
+  // Remove empty lines at start and end
+  return formattedCode.replace(/^\s*[\r\n]/gm, "").trim();
 };
 
 // Rate limiting configuration
@@ -42,12 +58,12 @@ const requestQueue: Array<() => Promise<void>> = [];
 let isProcessingQueue = false;
 
 // Sleep utility function
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Process the request queue
 async function processQueue() {
   if (isProcessingQueue || requestQueue.length === 0) return;
-  
+
   isProcessingQueue = true;
   while (requestQueue.length > 0) {
     const request = requestQueue.shift();
@@ -63,7 +79,7 @@ async function processQueue() {
 async function makeAPIRequestWithRetry<T>(
   apiCall: () => Promise<T>,
   attempt = 0,
-  maxAttempts = 5
+  maxAttempts = 5,
 ): Promise<T> {
   try {
     return await apiCall();
@@ -75,7 +91,7 @@ async function makeAPIRequestWithRetry<T>(
     ) {
       const delay = Math.min(
         RATE_LIMIT.maxDelay,
-        RATE_LIMIT.initialDelay * Math.pow(2, attempt)
+        RATE_LIMIT.initialDelay * Math.pow(2, attempt),
       );
       console.log(`Rate limited. Retrying in ${delay}ms...`);
       await sleep(delay);
@@ -120,7 +136,7 @@ Respond in this exact JSON format:
           const response = await model.generateContent(prompt);
           return response;
         });
-        
+
         const response = result.response;
         const responseText = response.text();
 
@@ -129,7 +145,9 @@ Respond in this exact JSON format:
         }
 
         try {
-          const cleanText = responseText.replace(/^```json\n|\n```$/g, '').trim();
+          const cleanText = responseText
+            .replace(/^```json\n|\n```$/g, "")
+            .trim();
           const parsed = JSON.parse(cleanText) as DiagramTypeResponse;
           if (
             parsed.type &&
@@ -182,19 +200,38 @@ export const generateDiagramWithAI = async (
   suggestedType: DiagramType,
   attempt = 0,
   isComplex = false,
+  previousError?: string,
 ): Promise<string> => {
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-pro-exp-02-05" });
 
-  // Get the syntax documentation for the suggested diagram type
   const syntaxDoc = await getSyntaxDocumentation(suggestedType);
 
-  const prompt =
-    attempt === 0
-      ? `Generate a ${isComplex ? "detailed and sophisticated" : "clear and concise"} ${suggestedType} using Mermaid.js syntax for the following text. ${
-          isComplex
-            ? "Include comprehensive relationships, styling, and advanced features to create a rich visualization."
-            : "Focus on essential relationships and keep the diagram simple and readable."
-        } Only return the Mermaid diagram code, no explanations or additional text.
+  const complexityGuidelines = isComplex
+    ? [
+        "- Utilize advanced features and styling",
+        "- Add comprehensive relationships",
+        "- Include detailed subgraphs where appropriate",
+        "- Use colors and formatting for better visualization",
+      ]
+    : [
+        "- Focus on key relationships",
+        "- Avoid complex styling",
+        "- Ensure proper syntax",
+        "- Keep it minimal but informative",
+      ];
+
+  const complexityDesc = isComplex
+    ? "detailed and sophisticated"
+    : "clear and concise";
+
+  const complexityInstructions = isComplex
+    ? "Include comprehensive relationships, styling, and advanced features to create a rich visualization."
+    : "Focus on essential relationships and keep the diagram simple and readable.";
+
+  let prompt: string;
+
+  if (attempt === 0) {
+    prompt = `Generate a ${complexityDesc} ${suggestedType} using Mermaid.js syntax for the following text. ${complexityInstructions} Only return the Mermaid diagram code, no explanations or additional text.
 
 Here is the official Mermaid.js syntax documentation for ${suggestedType}:
 
@@ -207,23 +244,19 @@ Important guidelines:
 - Start with "${suggestedType}"
 - Use ${isComplex ? "descriptive and detailed" : "clear and concise"} node labels
 - Follow the syntax documentation provided above
-${
-  isComplex
-    ? `- Utilize advanced features and styling
-- Add comprehensive relationships
-- Include detailed subgraphs where appropriate
-- Use colors and formatting for better visualization`
-    : `- Focus on key relationships
-- Avoid complex styling
-- Ensure proper syntax
-- Keep it minimal but informative`
-}`
-      : `Previous attempt to create a Mermaid diagram was invalid. Please generate a valid ${suggestedType} for this text. ${
-          isComplex
-            ? "While maintaining complexity, ensure the syntax is correct."
-            : "Focus on basic syntax and avoid styling."
-        }
+${complexityGuidelines.join("\n")}`;
+  } else {
+    const errorContext = previousError
+      ? `The previous attempt failed with this error:\n${previousError}\n\nPlease fix the syntax to avoid this error.\n`
+      : "";
 
+    prompt = `Previous attempt to create a Mermaid diagram was invalid. Please generate a valid ${suggestedType} for this text. ${
+      isComplex
+        ? "While maintaining complexity, ensure the syntax is correct."
+        : "Focus on basic syntax and avoid styling."
+    }
+
+${errorContext}
 Here is the official Mermaid.js syntax documentation for ${suggestedType}:
 
 ${syntaxDoc}
@@ -234,14 +267,8 @@ ${text}
 Requirements:
 - Must start with "${suggestedType}"
 - Use ${isComplex ? "advanced" : "simple"} syntax following the documentation above
-${
-  isComplex
-    ? `- Include detailed relationships and styling
-- Utilize advanced features where appropriate
-- Maintain proper syntax while being comprehensive`
-    : `- Focus on core relationships
-- No styling or decorations`
-}`;
+${complexityGuidelines.join("\n")}`;
+  }
 
   return new Promise((resolve, reject) => {
     const request = async () => {
