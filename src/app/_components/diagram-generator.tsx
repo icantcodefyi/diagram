@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import mermaid from "mermaid";
 import { api } from "@/trpc/react";
 import {
   Card,
@@ -9,64 +8,51 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Copy } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2, Copy, RefreshCw, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DIAGRAM_TYPES, EXAMPLE_SUGGESTIONS, type DiagramType } from "@/types/diagram";
+import { initializeMermaid, renderMermaidDiagram } from "@/lib/mermaid-config";
 
 export function DiagramGenerator() {
   const [input, setInput] = useState("");
   const [diagram, setDiagram] = useState("");
+  const [diagramType, setDiagramType] = useState<DiagramType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    mermaid.initialize({
-      startOnLoad: true,
-      theme: "default",
-      securityLevel: "loose",
-      fontFamily: "arial",
-      logLevel: "error",
-    });
+    initializeMermaid();
   }, []);
 
   // Initialize mutation
   const generateDiagram = api.ai.generateDiagram.useMutation({
     onMutate: () => {
       setIsLoading(true);
+      setError(null);
     },
     onSettled: () => {
       setIsLoading(false);
     },
     onSuccess: async (data) => {
       try {
-        setError(null);
         setDiagram(data.diagram);
+        setDiagramType(data.type);
+        toast({
+          title: "Success",
+          description: data.message,
+          variant: "default",
+          duration: 3000,
+        });
 
-        // Clear and re-render mermaid diagram
-        const element = document.querySelector("#mermaid-diagram");
-        if (element) {
-          // Clear previous content
-          element.innerHTML = "";
-
-          // Create a new div for the diagram
-          const diagramDiv = document.createElement("div");
-          diagramDiv.className = "mermaid";
-          diagramDiv.textContent = data.diagram;
-
-          // Add the new div to the container
-          element.appendChild(diagramDiv);
-
-          // Render the diagram
-          await mermaid.run({
-            nodes: [diagramDiv],
-          });
-        }
+        await renderMermaidDiagram(data.diagram, "#mermaid-diagram");
       } catch (err) {
-        setError("Failed to render diagram. Please try again.");
+        setError("Failed to render diagram. Please try again with a simpler description.");
         console.error("Mermaid render error:", err);
       }
     },
@@ -74,7 +60,7 @@ export function DiagramGenerator() {
       const errorMessage =
         err instanceof Error
           ? err.message
-          : "Failed to generate diagram. Please try again.";
+          : "Failed to generate diagram. Please try again with a different description.";
       setError(errorMessage);
     },
   });
@@ -99,14 +85,57 @@ export function DiagramGenerator() {
         duration: 2000,
       });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       toast({
-        title: `Error`,
+        title: "Error",
         description: "Failed to copy to clipboard",
         variant: "destructive",
         duration: 2000,
       });
     }
+  };
+
+  const handleDownloadSVG = async () => {
+    try {
+      const element = document.querySelector("#mermaid-diagram svg");
+      if (!element) throw new Error("No diagram found");
+
+      const svgData = new XMLSerializer().serializeToString(element);
+      const blob = new Blob([svgData], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `diagram-${Date.now()}.svg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Success",
+        description: "Diagram downloaded as SVG",
+        variant: "default",
+        duration: 2000,
+      });
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Error",
+        description: "Failed to download diagram",
+        variant: "destructive",
+        duration: 2000,
+      });
+    }
+  };
+
+  const handleReset = () => {
+    setInput("");
+    setDiagram("");
+    setDiagramType(null);
+    setError(null);
+    const element = document.querySelector("#mermaid-diagram");
+    if (element) element.innerHTML = "";
   };
 
   return (
@@ -117,8 +146,8 @@ export function DiagramGenerator() {
             AI Diagram Generator
           </CardTitle>
           <CardDescription className="text-center">
-            Describe what you want to diagram and I&apos;ll create it for you
-            using Mermaid.js
+            Describe what you want to diagram and I&apos;ll create it using Mermaid.js. 
+            Supports {Object.keys(DIAGRAM_TYPES).length} different diagram types!
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -127,18 +156,28 @@ export function DiagramGenerator() {
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Example: Create a sequence diagram showing how a user logs in to a website..."
+                placeholder={`Example: ${EXAMPLE_SUGGESTIONS[diagramType ?? "flowchart"]}`}
                 className="min-h-[128px] resize-y"
                 disabled={isLoading}
               />
               {error && (
                 <Alert variant="destructive">
+                  <AlertTitle>Error</AlertTitle>
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-between gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleReset}
+                disabled={isLoading || (!input && !diagram)}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Reset
+              </Button>
               <Button
                 type="submit"
                 disabled={isLoading || !input.trim()}
@@ -160,22 +199,41 @@ export function DiagramGenerator() {
 
       {diagram && !error && (
         <Card>
-          <CardContent className="pt-6">
+          <CardHeader>
+            <CardTitle className="text-xl">
+              {diagramType && `${diagramType.charAt(0).toUpperCase() + diagramType.slice(1)} Diagram`}
+            </CardTitle>
+            {diagramType && (
+              <CardDescription>
+                {DIAGRAM_TYPES[diagramType]}
+              </CardDescription>
+            )}
+          </CardHeader>
+          <CardContent>
             <div className="rounded-lg border bg-white p-4 dark:bg-slate-900">
               <div id="mermaid-diagram" className="overflow-x-auto"></div>
             </div>
-            <div className="mt-4 flex justify-end">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleCopyToClipboard}
-                className="text-sm"
-              >
-                <Copy className="mr-2 h-4 w-4" />
-                Copy Diagram Code
-              </Button>
-            </div>
           </CardContent>
+          <CardFooter className="flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleCopyToClipboard}
+              className="text-sm"
+            >
+              <Copy className="mr-2 h-4 w-4" />
+              Copy Code
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleDownloadSVG}
+              className="text-sm"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download SVG
+            </Button>
+          </CardFooter>
         </Card>
       )}
     </div>
