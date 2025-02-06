@@ -105,7 +105,7 @@ async function makeAPIRequestWithRetry<T>(
 export const determineDiagramType = async (
   text: string,
 ): Promise<DiagramType> => {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-001" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite-preview-02-05" });
 
   const prompt = `Analyze this text and determine the most suitable Mermaid diagram type for visualizing it. Consider the context, relationships, and visualization needs.
 
@@ -202,7 +202,7 @@ export const generateDiagramWithAI = async (
   isComplex = false,
   previousError?: string,
 ): Promise<string> => {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-pro-exp-02-05" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-001" });
 
   const syntaxDoc = await getSyntaxDocumentation(suggestedType);
 
