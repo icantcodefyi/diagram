@@ -1,0 +1,5 @@
+src/components/ui
+src/hooks
+*.d.ts
+*.config.js
+*.config.ts
