@@ -1,6 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { env } from "@/env";
 import { type DiagramType, DIAGRAM_TYPES } from "@/types/diagram";
+import fs from 'fs/promises';
+import path from 'path';
 
 const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
 
@@ -94,29 +96,55 @@ Respond in this exact JSON format:
   return "flowchart";
 };
 
+// Function to get syntax documentation for a diagram type
+const getSyntaxDocumentation = async (diagramType: DiagramType): Promise<string> => {
+  try {
+    const docPath = path.join(process.cwd(), 'src', 'syntax', `${diagramType}.md`);
+    const doc = await fs.readFile(docPath, 'utf8');
+    return doc;
+  } catch (error) {
+    console.warn(`Could not load syntax documentation for ${diagramType}:`, error);
+    return '';
+  }
+};
+
 // Function to generate diagram using AI
 export const generateDiagramWithAI = async (text: string, suggestedType: DiagramType, attempt = 0): Promise<string> => {
   const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-001" });
   
+  // Get the syntax documentation for the suggested diagram type
+  const syntaxDoc = await getSyntaxDocumentation(suggestedType);
+  
   const prompt = attempt === 0
-    ? `Generate a clear and concise ${suggestedType} using Mermaid.js syntax for the following text. Focus on essential relationships and keep the diagram simple and readable. Only return the Mermaid diagram code, no explanations or additional text:
+    ? `Generate a clear and concise ${suggestedType} using Mermaid.js syntax for the following text. Focus on essential relationships and keep the diagram simple and readable. Only return the Mermaid diagram code, no explanations or additional text.
 
+Here is the official Mermaid.js syntax documentation for ${suggestedType}:
+
+${syntaxDoc}
+
+Text to visualize:
 ${text}
 
 Important guidelines:
 - Start with "${suggestedType}"
 - Use clear and concise node labels
+- Follow the syntax documentation provided above
 - Focus on key relationships
 - Avoid complex styling
 - Ensure proper syntax
 - Keep it minimal but informative`
-    : `Previous attempt to create a Mermaid diagram was invalid. Please generate a valid ${suggestedType} for this text. Focus on basic syntax and avoid styling:
+    : `Previous attempt to create a Mermaid diagram was invalid. Please generate a valid ${suggestedType} for this text. Focus on basic syntax and avoid styling.
 
+Here is the official Mermaid.js syntax documentation for ${suggestedType}:
+
+${syntaxDoc}
+
+Text to visualize:
 ${text}
 
 Requirements:
 - Must start with "${suggestedType}"
-- Use simple syntax
+- Use simple syntax following the documentation above
 - Focus on core relationships
 - No styling or decorations`;
 

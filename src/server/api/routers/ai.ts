@@ -18,7 +18,7 @@ export const aiRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input }) => {
-      let attempts = 0;
+      let attempts = 0
       const maxAttempts = 5;
       let validDiagram = "";
       let error: Error | null = null;
