@@ -18,45 +18,69 @@ export const aiRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input }) => {
-      let attempts = 0
-      const maxAttempts = 5;
-      let validDiagram = "";
-      let error: Error | null = null;
+      try {
+        let attempts = 0;
+        const maxAttempts = 5;
+        let validDiagram = "";
+        let error: Error | null = null;
 
-      // Use AI to determine the most suitable diagram type
-      const suggestedType = await determineDiagramType(input.text);
-
-      while (attempts < maxAttempts) {
-        try {
-          const mermaidCode = await generateDiagramWithAI(
-            input.text,
-            suggestedType,
-            attempts,
-          );
-
-          if (isValidMermaidDiagram(mermaidCode)) {
-            validDiagram = mermaidCode;
-            break;
-          }
-        } catch (err) {
-          error = err as Error;
-          console.error("Error generating diagram:", err);
+        // Use AI to determine the most suitable diagram type
+        const suggestedType = await determineDiagramType(input.text);
+        
+        if (!suggestedType) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to determine diagram type",
+          });
         }
 
-        attempts++;
-      }
+        while (attempts < maxAttempts) {
+          try {
+            const mermaidCode = await generateDiagramWithAI(
+              input.text,
+              suggestedType,
+              attempts,
+            );
 
-      if (!validDiagram) {
+            // Ensure we have a string response
+            if (typeof mermaidCode !== "string") {
+              throw new Error("Invalid response format from AI");
+            }
+
+            if (isValidMermaidDiagram(mermaidCode)) {
+              validDiagram = mermaidCode;
+              break;
+            }
+          } catch (err) {
+            error = err instanceof Error ? err : new Error("Unknown error occurred");
+            console.error("Error generating diagram:", error);
+          }
+
+          attempts++;
+        }
+
+        if (!validDiagram) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Failed to generate a valid diagram after ${maxAttempts} attempts. ${error?.message ?? ""}`,
+          });
+        }
+
+        // Return only serializable data
+        return {
+          diagram: validDiagram,
+          type: suggestedType,
+          message: `Generated a ${suggestedType} diagram based on your input.`,
+        };
+      } catch (error) {
+        // Properly handle and transform any errors
+        if (error instanceof TRPCError) {
+          throw error;
+        }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Failed to generate a valid diagram after ${maxAttempts} attempts. ${error?.message ?? ""}`,
+          message: error instanceof Error ? error.message : "An unknown error occurred",
         });
       }
-
-      return {
-        diagram: validDiagram,
-        type: suggestedType,
-        message: `Generated a ${suggestedType} based on your input.`,
-      };
     }),
 });

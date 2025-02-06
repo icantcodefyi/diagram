@@ -11,15 +11,27 @@ interface DiagramTypeResponse {
   reasoning: string;
 }
 
-// Function to validate if the string is a valid Mermaid diagram
+// Function to do basic syntax validation of a Mermaid diagram
 export const isValidMermaidDiagram = (diagram: string): boolean => {
-  const diagramParts = diagram.trim().split(/\s+/);
-  if (diagramParts.length < 2) return false;
-  
-  const diagramType = diagramParts[0]?.toLowerCase() ?? "";
-  return Object.keys(DIAGRAM_TYPES).some(type => 
-    diagramType.includes(type.toLowerCase())
-  );
+  try {
+    // Basic syntax validation
+    if (!diagram || typeof diagram !== 'string') {
+      return false;
+    }
+
+    // Check if the diagram starts with a valid diagram type
+    const validStartKeywords = [
+      'graph', 'flowchart', 'sequenceDiagram', 'classDiagram', 
+      'stateDiagram', 'erDiagram', 'journey', 'gantt', 
+      'pie', 'quadrantChart', 'requirementDiagram', 'gitGraph'
+    ];
+
+    const firstLine = diagram.trim().split('\n')[0]?.trim() ?? '';
+    return validStartKeywords.some(keyword => firstLine.startsWith(keyword));
+  } catch (error) {
+    console.warn('Basic diagram validation failed:', error);
+    return false;
+  }
 };
 
 // Function to remove style definitions from Mermaid diagram
@@ -43,7 +55,7 @@ export const formatDiagramCode = (code: string): string => {
 
 // Function to determine the best diagram type using AI
 export const determineDiagramType = async (text: string): Promise<DiagramType> => {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.0-pro-001" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-001" });
   
   const prompt = `Analyze this text and determine the most suitable Mermaid diagram type for visualizing it. Consider the context, relationships, and visualization needs.
 
@@ -110,7 +122,7 @@ const getSyntaxDocumentation = async (diagramType: DiagramType): Promise<string>
 
 // Function to generate diagram using AI
 export const generateDiagramWithAI = async (text: string, suggestedType: DiagramType, attempt = 0): Promise<string> => {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-001" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-pro-exp-02-05" });
   
   // Get the syntax documentation for the suggested diagram type
   const syntaxDoc = await getSyntaxDocumentation(suggestedType);
@@ -148,16 +160,25 @@ Requirements:
 - Focus on core relationships
 - No styling or decorations`;
 
-  const result = await model.generateContent(prompt);
-  const response = result.response;
-  const responseText = response.text();
-  
-  if (typeof responseText !== "string") {
-    throw new Error("Invalid response from AI model");
+  try {
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    
+    if (!response?.text) {
+      throw new Error("Invalid or empty response from AI model");
+    }
+
+    const responseText = response.text();
+    if (typeof responseText !== "string") {
+      throw new Error("Invalid response format from AI model");
+    }
+
+    let mermaidCode = formatDiagramCode(responseText);
+    mermaidCode = removeStyles(mermaidCode);
+
+    return mermaidCode;
+  } catch (error) {
+    console.error("Error generating diagram:", error);
+    throw error;
   }
-
-  let mermaidCode = formatDiagramCode(responseText);
-  mermaidCode = removeStyles(mermaidCode);
-
-  return mermaidCode;
 }; 

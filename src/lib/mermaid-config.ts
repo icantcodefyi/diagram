@@ -32,23 +32,44 @@ export const initializeMermaid = () => {
   });
 };
 
+export const validateDiagram = async (diagram: string): Promise<boolean> => {
+  try {
+    const { svg } = await mermaid.render('validate-diagram', diagram);
+    return !!svg;
+  } catch (error) {
+    console.warn('Client-side diagram validation failed:', error);
+    return false;
+  }
+};
+
 export const renderMermaidDiagram = async (diagram: string, elementId: string) => {
   const element = document.querySelector(elementId);
   if (!element) return;
 
-  // Clear previous content
-  element.innerHTML = "";
+  try {
+    // Validate the diagram first
+    const isValid = await validateDiagram(diagram);
+    if (!isValid) {
+      throw new Error('Invalid diagram syntax');
+    }
 
-  // Create a new div for the diagram
-  const diagramDiv = document.createElement("div");
-  diagramDiv.className = "mermaid";
-  diagramDiv.textContent = diagram;
+    // Clear previous content
+    element.innerHTML = "";
 
-  // Add the new div to the container
-  element.appendChild(diagramDiv);
+    // Create a new div for the diagram
+    const diagramDiv = document.createElement("div");
+    diagramDiv.className = "mermaid";
+    diagramDiv.textContent = diagram;
 
-  // Render the diagram
-  await mermaid.run({
-    nodes: [diagramDiv],
-  });
+    // Add the new div to the container
+    element.appendChild(diagramDiv);
+
+    // Render the diagram
+    await mermaid.run({
+      nodes: [diagramDiv],
+    });
+  } catch (error) {
+    console.error('Failed to render diagram:', error);
+    throw error;
+  }
 }; 
