@@ -1,15 +1,26 @@
 import "@/styles/globals.css";
 
-import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
+import { Inter, Bricolage_Grotesque } from "next/font/google";
+import { cn } from "@/lib/utils";
 
 import { TRPCReactProvider } from "@/trpc/react";
 import { Toaster } from "@/components/ui/toaster";
 import { SessionProviderWrapper } from "@/app/_components/session-provider";
 import { CSPostHogProvider } from "@/app/_components/posthog-provider";
 
+const fontSans = Inter({
+  variable: "--font-sans",
+  subsets: ["latin"],
+});
+
+const fontHeading = Bricolage_Grotesque({
+  variable: "--font-heading",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
-  title: "Diagramify by Ani",
+  title: "Diagramify",
   description: "Generate beautiful diagrams instantly using AI. Transform your ideas into clear, professional diagrams with natural language.",
   metadataBase: new URL('https://diagram.ani.ink'),
   authors: [{ name: "Ani" }],
@@ -70,8 +81,12 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${GeistSans.variable}`}>
-      <body>
+    <html lang="en">
+      <body className={cn(
+        "min-h-screen font-sans antialiased",
+        fontSans.variable,
+        fontHeading.variable
+      )}>
         <TRPCReactProvider>
           <CSPostHogProvider>
             <SessionProviderWrapper>{children}</SessionProviderWrapper>
