@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Expand, Copy, Trash2 } from "lucide-react";
+import { Expand, Copy, Trash2 } from "lucide-react";
 import { type Diagram } from "@/store/diagram-store";
 import { DiagramPreviewModal } from "./diagram-preview-modal";
 import { renderMermaidDiagram } from "@/lib/mermaid-config";
@@ -61,6 +61,7 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
         duration: 2000,
       });
     } catch (err) {
+      console.error(err);
       toast({
         title: "Error",
         description: "Failed to copy code to clipboard",
@@ -70,47 +71,6 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
     }
   };
 
-  const handleDownloadPNG = async () => {
-    try {
-      const response = await fetch("/api/export", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          content: diagram.content,
-          type: diagram.type,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Export failed");
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${diagram.name ?? diagram.type}-diagram-${diagram.id}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "Success",
-        description: "Diagram downloaded as PNG",
-        variant: "default",
-        duration: 2000,
-      });
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to download diagram",
-        variant: "destructive",
-        duration: 2000,
-      });
-    }
-  };
 
   return (
     <>

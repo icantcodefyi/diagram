@@ -25,7 +25,6 @@ interface DiagramDownloadButtonProps {
 }
 
 export function DiagramDownloadButton({
-  content,
   diagramId,
   name,
   type,

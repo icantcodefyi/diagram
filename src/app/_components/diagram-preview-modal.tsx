@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/texturebutton";
-import { Copy, ChevronDown } from "lucide-react";
+import { Copy } from "lucide-react";
 import { DiagramDownloadButton } from "./diagram-download-button";
 import { type Diagram } from "@/store/diagram-store";
 import { renderMermaidDiagram } from "@/lib/mermaid-config";
@@ -55,6 +55,7 @@ export function DiagramPreviewModal({
         duration: 2000,
       });
     } catch (err) {
+      console.error(err);
       toast({
         title: "Error",
         description: "Failed to copy code to clipboard",

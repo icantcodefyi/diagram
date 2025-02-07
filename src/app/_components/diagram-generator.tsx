@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/texturebutton";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader, Copy, RefreshCw, Download, ChevronDown } from "lucide-react";
+import { Loader, Copy, RefreshCw, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   DIAGRAM_TYPES,
@@ -25,7 +25,6 @@ import {
   initializeMermaid,
   renderMermaidDiagram,
   changeTheme,
-  getCurrentTheme,
   type MermaidTheme,
 } from "@/lib/mermaid-config";
 import { Switch } from "@/components/ui/switch";
@@ -34,7 +33,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DiagramDownloadButton } from "./diagram-download-button";
@@ -72,7 +70,7 @@ export function DiagramGenerator() {
   useEffect(() => {
     // Initialize Mermaid when component mounts
     void initializeMermaid(currentTheme);
-  }, []);
+  }, [currentTheme]);
 
   useEffect(() => {
     setAnonymousCredits(getAnonymousUser().credits);
