@@ -19,15 +19,23 @@ export const aiRouter = createTRPCRouter({
         isComplex: z.boolean().optional().default(false),
         previousError: z.string().optional(),
         name: z.string().optional(),
+        anonymousId: z.string().optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {
       try {
         // Check anonymous user limits
         if (!ctx.session?.user) {
+          if (!input.anonymousId) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Anonymous ID is required for unauthenticated users",
+            });
+          }
+
           const anonymousCount = await db.diagram.count({
             where: {
-              userId: null,
+              anonymousId: input.anonymousId,
               createdAt: {
                 gte: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
               },
@@ -176,6 +184,7 @@ export const aiRouter = createTRPCRouter({
             name: generatedTitle,
             isComplex: input.isComplex ?? false,
             userId: ctx.session?.user?.id,
+            anonymousId: !ctx.session?.user ? input.anonymousId : undefined,
           },
         });
 

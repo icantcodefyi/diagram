@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DiagramDownloadButton } from "./diagram-download-button";
 import { LoginDialog } from "./login-dialog";
+import { getAnonymousUser, updateAnonymousCredits } from "@/lib/anonymous-user";
 
 export function DiagramGenerator() {
   const [input, setInput] = useState("");
@@ -51,6 +52,7 @@ export function DiagramGenerator() {
   const [showLoginDialog, setShowLoginDialog] = useState(false);
   const { toast } = useToast();
   const { data: session } = useSession();
+  const anonymousUser = getAnonymousUser();
 
   // Fetch user credits if logged in
   const { data: userCredits } = api.ai.getUserCredits.useQuery(undefined, {
@@ -96,6 +98,12 @@ export function DiagramGenerator() {
         // Render the new diagram
         await renderMermaidDiagram(data.diagram, "#mermaid-diagram");
 
+        // Update anonymous user credits if not logged in
+        if (!session?.user) {
+          const requiredCredits = isComplex ? 2 : 1;
+          updateAnonymousCredits(anonymousUser.credits - requiredCredits);
+        }
+
         toast({
           title: "Success",
           description: data.message,
@@ -111,6 +119,7 @@ export function DiagramGenerator() {
           text: input,
           isComplex,
           previousError: errorMessage,
+          anonymousId: !session?.user ? anonymousUser.id : undefined,
         });
       }
     },
@@ -138,7 +147,7 @@ export function DiagramGenerator() {
     e.preventDefault();
     setError(null);
     
-    // Check if user has enough credits before submitting
+    // Check credits based on user type
     if (session?.user && userCredits?.credits !== undefined) {
       const requiredCredits = isComplex ? 2 : 1;
       if (userCredits.credits < requiredCredits) {
@@ -150,13 +159,25 @@ export function DiagramGenerator() {
         });
         return;
       }
+    } else {
+      // Check anonymous user credits
+      const requiredCredits = isComplex ? 2 : 1;
+      if (anonymousUser.credits < requiredCredits) {
+        setShowLoginDialog(true);
+        return;
+      }
     }
     
     if (!input.trim()) {
       setError("Please enter some text to generate a diagram.");
       return;
     }
-    generateDiagram.mutate({ text: input, isComplex });
+
+    generateDiagram.mutate({ 
+      text: input, 
+      isComplex,
+      anonymousId: !session?.user ? anonymousUser.id : undefined,
+    });
   };
 
   const handleCopyToClipboard = async () => {
@@ -212,7 +233,6 @@ export function DiagramGenerator() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-             
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -230,7 +250,7 @@ export function DiagramGenerator() {
                   }
                 }}
               />
-               <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <Switch
                     id="complex-mode"
@@ -245,14 +265,16 @@ export function DiagramGenerator() {
                     Generate detailed and sophisticated diagram
                   </Label>
                 </div>
-                {session?.user && (
-                  <div className="text-sm text-muted-foreground">
-                    Credits: {userCredits?.credits ?? 0} / 10
-                    {isComplex && (
-                      <span className="ml-1">(Uses 2 credits)</span>
-                    )}
-                  </div>
-                )}
+                <div className="text-sm text-muted-foreground">
+                  {session?.user ? (
+                    `Credits: ${userCredits?.credits ?? 0} / 10`
+                  ) : (
+                    `Credits: ${anonymousUser.credits} / 5`
+                  )}
+                  {isComplex && (
+                    <span className="ml-1">(Uses 2 credits)</span>
+                  )}
+                </div>
               </div>
               {error && (
                 <Alert variant="destructive">
