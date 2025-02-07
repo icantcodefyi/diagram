@@ -10,6 +10,77 @@ import {
   generateDiagramTitle,
 } from "@/lib/ai-utils";
 import { db } from "@/server/db";
+import puppeteer from "puppeteer";
+import mermaid from "mermaid";
+
+async function validateMermaidDiagram(code: string): Promise<boolean> {
+  try {
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+    
+    const page = await browser.newPage();
+    
+    // Inject Mermaid and validation logic
+    await page.setContent(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
+        </head>
+        <body>
+          <div id="container" class="mermaid">${code}</div>
+        </body>
+      </html>
+    `);
+
+    // Add the validation function directly to the page context
+    await page.addScriptTag({
+      content: `
+        window.validateDiagram = async function(code) {
+          try {
+            await mermaid.initialize({
+              startOnLoad: false,
+              securityLevel: 'strict'
+            });
+
+            await mermaid.parse(code);
+            const { svg } = await mermaid.render('validate-diagram', code);
+            return { isValid: !!svg, error: null };
+          } catch (error) {
+            return { 
+              isValid: false, 
+              error: error.message || 'Unknown error during validation'
+            };
+          }
+        }
+      `
+    });
+
+    // Wait for Mermaid and validation function to be ready
+    await page.waitForFunction(() => 
+      typeof window.mermaid !== 'undefined' && 
+      typeof window.validateDiagram === 'function'
+    );
+
+    // Execute validation with proper error handling
+    const results = await page.evaluate(async (code) => {
+      return await window.validateDiagram(code);
+    }, code);
+
+    await browser.close();
+
+    if (!results.isValid) {
+      console.error('Mermaid validation failed:', results.error);
+    }
+
+    return results.isValid;
+  } catch (error) {
+    console.error('Validation error:', error);
+    return false;
+  }
+}
 
 export const aiRouter = createTRPCRouter({
   generateDiagram: publicProcedure
@@ -90,7 +161,7 @@ export const aiRouter = createTRPCRouter({
         let attempts = 0;
         const maxAttempts = 5;
         let validDiagram = "";
-        let error: Error | null = null;
+        let lastError: Error | null = null;
 
         // Use AI to determine the most suitable diagram type
         const suggestedType = await determineDiagramType(input.text);
@@ -109,27 +180,36 @@ export const aiRouter = createTRPCRouter({
               suggestedType,
               attempts,
               input.isComplex,
-              input.previousError,
+              lastError?.message ?? input.previousError,
             );
-
+            console.log('Generated diagram code:', mermaidCode);
             if (typeof mermaidCode !== "string") {
-              throw new Error("Invalid response format from AI");
+              lastError = new Error("Invalid response format from AI");
+              attempts++;
+              continue;
+            }
+
+            // Validate the Mermaid diagram
+            const isValid = await validateMermaidDiagram(mermaidCode);
+            if (!isValid) {
+              lastError = new Error("Generated diagram failed validation");
+              attempts++;
+              continue;
             }
 
             validDiagram = mermaidCode;
             break;
           } catch (err) {
-            error = err instanceof Error ? err : new Error("Unknown error occurred");
-            console.error("Error generating diagram:", error);
+            lastError = err instanceof Error ? err : new Error("Unknown error occurred");
+            console.error(`Attempt ${attempts + 1} failed:`, lastError);
+            attempts++;
           }
-
-          attempts++;
         }
 
         if (!validDiagram) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: `Failed to generate a valid diagram after ${maxAttempts} attempts. ${error?.message ?? ""}`,
+            message: `Failed to generate a valid diagram after ${maxAttempts} attempts. Last error: ${lastError?.message ?? "Unknown error"}`,
           });
         }
 
@@ -176,7 +256,7 @@ export const aiRouter = createTRPCRouter({
           }
         }
 
-        // Store the diagram after successful generation
+        // Store the diagram after successful generation and validation
         const diagram = await db.diagram.create({
           data: {
             content: validDiagram,
@@ -191,7 +271,7 @@ export const aiRouter = createTRPCRouter({
         return {
           diagram: validDiagram,
           type: suggestedType,
-          message: `Generated a ${suggestedType} diagram based on your input.`,
+          message: `Successfully generated a valid ${suggestedType} diagram.`,
           storedDiagram: diagram,
         };
       } catch (error) {
