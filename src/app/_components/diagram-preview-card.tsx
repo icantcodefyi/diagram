@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/texturebutton";
 import { Expand, Copy, Trash2 } from "lucide-react";
 import { type Diagram } from "@/store/diagram-store";
-import { DiagramPreviewModal } from "./diagram-preview-modal";
+import { DiagramPreviewModal } from "@/app/_components/diagram/diagram-preview-modal";
 import { renderMermaidDiagram } from "@/lib/mermaid-config";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/trpc/react";

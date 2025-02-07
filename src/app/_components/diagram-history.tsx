@@ -5,7 +5,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
-import { DiagramPreviewModal } from "./diagram-preview-modal";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
@@ -17,8 +16,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { type Diagram } from "@prisma/client";
-
-type DiagramType = Diagram;
+import { DiagramHistoryItem } from "@/app/_components/diagram/diagram-history-item";
+import { DiagramPreviewModal } from "@/app/_components/diagram/diagram-preview-modal";
 
 export function DiagramHistory() {
   const { data: session } = useSession();
@@ -27,8 +26,8 @@ export function DiagramHistory() {
     {
       enabled: !!session?.user,
     },
-  ) as { data: DiagramType[] | undefined; isLoading: boolean };
-  const [selectedDiagram, setSelectedDiagram] = useState<DiagramType | null>(null);
+  );
+  const [selectedDiagram, setSelectedDiagram] = useState<Diagram | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
@@ -40,7 +39,7 @@ export function DiagramHistory() {
     }
   };
 
-  const HistoryContent = () => (
+  const renderHistoryContent = () => (
     <div className={`p-4 h-screen overflow-y-auto ${!isCollapsed || isMobile ? "glassmorphism" : ""}`}>
       <Button
         variant="link"
@@ -59,62 +58,51 @@ export function DiagramHistory() {
       {(!isCollapsed || isMobile) && (
         <ScrollArea className="h-[calc(100vh-100px)]">
           <div className="space-y-2">
-            {isLoading ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <Button
-                  key={i}
-                  variant="link"
-                  className="h-auto w-full justify-start py-2 text-left text-muted-foreground"
-                  disabled
-                >
-                  <div className="flex w-full flex-col">
-                    <Skeleton className="mb-1 h-5 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                  </div>
-                </Button>
-              ))
-            ) : !session?.user ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <Button
-                  key={i}
-                  variant="link"
-                  className="h-auto w-full justify-start py-2 text-left text-muted-foreground"
+            {isLoading && (
+              <>
+                <HistorySkeleton />
+                <HistorySkeleton />
+                <HistorySkeleton />
+              </>
+            )}
+            
+            {!session?.user && (
+              <>
+                <DiagramHistoryItem
+                  title="Example Diagram"
+                  subtitle="Sign in to view history"
                   onClick={handleHistoryClick}
-                >
-                  <div className="flex flex-col">
-                    <span className="font-medium">Example Diagram</span>
-                    <span className="text-xs text-muted-foreground">
-                      Sign in to view history
-                    </span>
-                  </div>
-                </Button>
-              ))
-            ) : diagrams && diagrams.length === 0 ? (
+                />
+                <DiagramHistoryItem
+                  title="Example Diagram"
+                  subtitle="Sign in to view history"
+                  onClick={handleHistoryClick}
+                />
+                <DiagramHistoryItem
+                  title="Example Diagram"
+                  subtitle="Sign in to view history"
+                  onClick={handleHistoryClick}
+                />
+              </>
+            )}
+
+            {session?.user && diagrams?.length === 0 && (
               <p className="text-center text-sm text-muted-foreground">
                 No diagrams yet
               </p>
-            ) : (
-              diagrams?.map((diagram: DiagramType) => (
-                <Button
-                  key={diagram.id}
-                  variant="link"
-                  className="h-auto w-full justify-start py-2 text-left text-muted-foreground hover:text-foreground transition-colors"
-                  onClick={() => setSelectedDiagram(diagram)}
-                >
-                  <div className="flex flex-col">
-                    <span className="font-medium">
-                      {diagram.name ?? "Untitled Diagram"}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(diagram.createdAt, {
-                        addSuffix: true,
-                      })}{" "}
-                      • {diagram.type}
-                    </span>
-                  </div>
-                </Button>
-              ))
             )}
+
+            {session?.user &&
+              diagrams?.map((diagram) => (
+                <DiagramHistoryItem
+                  key={diagram.id}
+                  title={diagram.name ?? "Untitled Diagram"}
+                  subtitle={`${formatDistanceToNow(diagram.createdAt, {
+                    addSuffix: true,
+                  })} • ${diagram.type}`}
+                  onClick={() => setSelectedDiagram(diagram)}
+                />
+              ))}
           </div>
         </ScrollArea>
       )}
@@ -124,55 +112,130 @@ export function DiagramHistory() {
   return (
     <>
       {isMobile ? (
-        <>
-          <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-            <DrawerTrigger asChild>
-              <Button variant="link" className="fixed left-4 top-4 z-50">
-                History
-              </Button>
-            </DrawerTrigger>
-            <DrawerContent>
-              <HistoryContent />
-            </DrawerContent>
-          </Drawer>
-          {selectedDiagram && (
-            <DiagramPreviewModal
-              diagram={selectedDiagram}
-              isOpen={!!selectedDiagram}
-              onClose={() => setSelectedDiagram(null)}
-            />
-          )}
-        </>
+        <MobileHistoryView
+          isOpen={isDrawerOpen}
+          onOpenChange={setIsDrawerOpen}
+          selectedDiagram={selectedDiagram}
+          onClose={() => setSelectedDiagram(null)}
+        >
+          {renderHistoryContent()}
+        </MobileHistoryView>
       ) : (
-        <div className="fixed left-0 top-0 z-50 w-[300px]">
-          <HistoryContent />
-          {selectedDiagram && (
-            <DiagramPreviewModal
-              diagram={selectedDiagram}
-              isOpen={!!selectedDiagram}
-              onClose={() => setSelectedDiagram(null)}
-            />
-          )}
-        </div>
+        <DesktopHistoryView
+          selectedDiagram={selectedDiagram}
+          onClose={() => setSelectedDiagram(null)}
+        >
+          {renderHistoryContent()}
+        </DesktopHistoryView>
       )}
 
-      <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Sign in to access history</DialogTitle>
-            <DialogDescription>
-              Sign in to save your diagrams and access them anytime, anywhere.
-            </DialogDescription>
-          </DialogHeader>
-          <Button
-            variant="default"
-            className="w-full"
-            onClick={() => signIn("google", { callbackUrl: "/" })}
-          >
-            Sign in
-          </Button>
-        </DialogContent>
-      </Dialog>
+      <LoginDialog
+        isOpen={showLoginDialog}
+        onClose={() => setShowLoginDialog(false)}
+      />
     </>
+  );
+}
+
+function HistorySkeleton() {
+  return (
+    <Button
+      variant="link"
+      className="h-auto w-full justify-start py-2 text-left text-muted-foreground"
+      disabled
+    >
+      <div className="flex w-full flex-col">
+        <Skeleton className="mb-1 h-5 w-3/4" />
+        <Skeleton className="h-4 w-1/2" />
+      </div>
+    </Button>
+  );
+}
+
+interface MobileHistoryViewProps {
+  children: React.ReactNode;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  selectedDiagram: Diagram | null;
+  onClose: () => void;
+}
+
+function MobileHistoryView({
+  children,
+  isOpen,
+  onOpenChange,
+  selectedDiagram,
+  onClose,
+}: MobileHistoryViewProps) {
+  return (
+    <>
+      <Drawer open={isOpen} onOpenChange={onOpenChange}>
+        <DrawerTrigger asChild>
+          <Button variant="link" className="fixed left-4 top-4 z-50">
+            History
+          </Button>
+        </DrawerTrigger>
+        <DrawerContent>{children}</DrawerContent>
+      </Drawer>
+      {selectedDiagram && (
+        <DiagramPreviewModal
+          diagram={selectedDiagram}
+          isOpen={!!selectedDiagram}
+          onClose={onClose}
+        />
+      )}
+    </>
+  );
+}
+
+interface DesktopHistoryViewProps {
+  children: React.ReactNode;
+  selectedDiagram: Diagram | null;
+  onClose: () => void;
+}
+
+function DesktopHistoryView({
+  children,
+  selectedDiagram,
+  onClose,
+}: DesktopHistoryViewProps) {
+  return (
+    <div className="fixed left-0 top-0 z-50 w-[300px]">
+      {children}
+      {selectedDiagram && (
+        <DiagramPreviewModal
+          diagram={selectedDiagram}
+          isOpen={!!selectedDiagram}
+          onClose={onClose}
+        />
+      )}
+    </div>
+  );
+}
+
+interface LoginDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Sign in to access history</DialogTitle>
+          <DialogDescription>
+            Sign in to save your diagrams and access them anytime, anywhere.
+          </DialogDescription>
+        </DialogHeader>
+        <Button
+          variant="default"
+          className="w-full"
+          onClick={() => signIn("google", { callbackUrl: "/" })}
+        >
+          Sign in
+        </Button>
+      </DialogContent>
+    </Dialog>
   );
 }
