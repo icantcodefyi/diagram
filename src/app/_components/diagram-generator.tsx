@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { api } from "@/trpc/react";
+import { useSession } from "next-auth/react";
 import {
   Card,
   CardContent,
@@ -37,6 +38,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DiagramDownloadButton } from "./diagram-download-button";
+import { LoginDialog } from "./login-dialog";
 
 export function DiagramGenerator() {
   const [input, setInput] = useState("");
@@ -46,7 +48,15 @@ export function DiagramGenerator() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isComplex, setIsComplex] = useState(false);
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
   const { toast } = useToast();
+  const { data: session } = useSession();
+
+  // Fetch user credits if logged in
+  const { data: userCredits } = api.ai.getUserCredits.useQuery(undefined, {
+    enabled: !!session?.user,
+    refetchOnWindowFocus: true,
+  });
 
   const themes: { label: string; value: MermaidTheme }[] = [
     { label: "Default", value: "default" },
@@ -105,17 +115,43 @@ export function DiagramGenerator() {
       }
     },
     onError: (err) => {
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : "Failed to generate diagram. Please try again with a different description.";
+      const errorMessage = err instanceof Error ? err.message : "Failed to generate diagram. Please try again with a different description.";
       setError(errorMessage);
+      
+      // Handle credit-related errors
+      if (err instanceof Error) {
+        if (err.message.includes("Please login to generate more diagrams")) {
+          setShowLoginDialog(true);
+        } else if (err.message.includes("Insufficient credits")) {
+          toast({
+            title: "Out of Credits",
+            description: "You've used all your credits for today. Credits will reset tomorrow!",
+            variant: "destructive",
+            duration: 5000,
+          });
+        }
+      }
     },
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    
+    // Check if user has enough credits before submitting
+    if (session?.user && userCredits?.credits !== undefined) {
+      const requiredCredits = isComplex ? 2 : 1;
+      if (userCredits.credits < requiredCredits) {
+        toast({
+          title: "Insufficient Credits",
+          description: "You don't have enough credits for this operation. Credits will reset tomorrow!",
+          variant: "destructive",
+          duration: 5000,
+        });
+        return;
+      }
+    }
+    
     if (!input.trim()) {
       setError("Please enter some text to generate a diagram.");
       return;
@@ -176,6 +212,7 @@ export function DiagramGenerator() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
+             
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -193,19 +230,29 @@ export function DiagramGenerator() {
                   }
                 }}
               />
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="complex-mode"
-                  checked={isComplex}
-                  onCheckedChange={setIsComplex}
-                  disabled={isLoading}
-                />
-                <Label
-                  htmlFor="complex-mode"
-                  className="cursor-pointer select-none text-sm text-muted-foreground"
-                >
-                  Generate detailed and sophisticated diagram
-                </Label>
+               <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="complex-mode"
+                    checked={isComplex}
+                    onCheckedChange={setIsComplex}
+                    disabled={isLoading}
+                  />
+                  <Label
+                    htmlFor="complex-mode"
+                    className="cursor-pointer select-none text-sm text-muted-foreground"
+                  >
+                    Generate detailed and sophisticated diagram
+                  </Label>
+                </div>
+                {session?.user && (
+                  <div className="text-sm text-muted-foreground">
+                    Credits: {userCredits?.credits ?? 0} / 10
+                    {isComplex && (
+                      <span className="ml-1">(Uses 2 credits)</span>
+                    )}
+                  </div>
+                )}
               </div>
               {error && (
                 <Alert variant="destructive">
@@ -301,6 +348,11 @@ export function DiagramGenerator() {
           </CardFooter>
         </Card>
       )}
+
+      <LoginDialog 
+        isOpen={showLoginDialog} 
+        onClose={() => setShowLoginDialog(false)} 
+      />
     </div>
   );
 }
