@@ -54,15 +54,9 @@ export function Footer() {
         <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
           Changelog
         </Link>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-          Docs
-        </Link>
       </div>
       <div className="mt-10 flex basis-1/2 flex-col gap-5 md:mt-0 md:basis-auto">
         <h3 className="font-semibold">Resources</h3>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-          Community
-        </Link>
         <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
           Contact
         </Link>
@@ -80,9 +74,6 @@ export function Footer() {
         </Link>
         <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
           Blog
-        </Link>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-          Brand
         </Link>
       </div>
       <div className="mt-10 flex basis-1/2 flex-col gap-5 md:mt-0 md:basis-auto">
