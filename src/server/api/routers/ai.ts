@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
@@ -11,7 +12,18 @@ import {
 } from "@/lib/ai-utils";
 import { db } from "@/server/db";
 import puppeteer from "puppeteer";
-import mermaid from "mermaid";
+
+// Extend Window interface to include Mermaid properties
+declare global {
+  interface Window {
+    mermaid: {
+      initialize: (config: { startOnLoad: boolean; securityLevel: string }) => Promise<void>;
+      parse: (code: string) => Promise<void>;
+      render: (id: string, code: string) => Promise<{ svg: string }>;
+    };
+    validateDiagram: (code: string) => Promise<{ isValid: boolean; error: string | null }>;
+  }
+}
 
 async function validateMermaidDiagram(code: string): Promise<boolean> {
   try {
