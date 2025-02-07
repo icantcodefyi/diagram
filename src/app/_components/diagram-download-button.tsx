@@ -21,6 +21,7 @@ interface DiagramDownloadButtonProps {
   variant?: "minimal" | "secondary";
   size?: "default" | "sm";
   showLabel?: boolean;
+  simpleMode?: boolean;
 }
 
 export function DiagramDownloadButton({
@@ -31,6 +32,7 @@ export function DiagramDownloadButton({
   variant = "secondary",
   size = "sm",
   showLabel = true,
+  simpleMode = false,
 }: DiagramDownloadButtonProps) {
   const { toast } = useToast();
 
@@ -227,7 +229,16 @@ export function DiagramDownloadButton({
     }
   };
 
-  return (
+  return simpleMode ? (
+    <Button
+      variant="minimal"
+      size="icon"
+      onClick={handleDownloadPNG}
+      className="h-8 w-8 rounded-sm"
+    >
+      <Download className="h-4 w-4" />
+    </Button>
+  ) : (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant={variant} size={size} className="gap-2">

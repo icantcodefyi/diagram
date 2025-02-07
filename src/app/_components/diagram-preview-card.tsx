@@ -154,6 +154,7 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
               name={diagram.name}
               type={diagram.type}
               showLabel={false}
+              simpleMode={true}
             />
             <Button
               variant="secondary"

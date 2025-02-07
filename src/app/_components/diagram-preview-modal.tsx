@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/texturebutton";
 import { Copy, ChevronDown } from "lucide-react";
 import { DiagramDownloadButton } from "./diagram-download-button";
 import { type Diagram } from "@/store/diagram-store";
@@ -89,7 +89,7 @@ export function DiagramPreviewModal({
               onClick={handleCopyCode}
               className="gap-2"
             >
-              <Copy className="h-4 w-4" />
+              <Copy className="mr-2 h-4 w-4" />
               Copy Code
             </Button>
             <DiagramDownloadButton
