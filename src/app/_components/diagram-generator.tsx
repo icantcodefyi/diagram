@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { api } from "@/trpc/react";
 import { useSession } from "next-auth/react";
 import {
@@ -38,6 +38,7 @@ import {
 import { DiagramDownloadButton } from "./diagram-download-button";
 import { LoginDialog } from "./login-dialog";
 import { getAnonymousUser, updateAnonymousCredits } from "@/lib/anonymous-user";
+import React from "react";
 
 export function DiagramGenerator() {
   const [input, setInput] = useState("");
@@ -52,6 +53,7 @@ export function DiagramGenerator() {
   const { data: session } = useSession();
   const anonymousUser = getAnonymousUser();
   const [anonymousCredits, setAnonymousCredits] = useState(0);
+  const hasInitialized = useRef(false);
 
   // Fetch user credits if logged in
   const { data: userCredits } = api.ai.getUserCredits.useQuery(undefined, {
@@ -76,7 +78,7 @@ export function DiagramGenerator() {
     setAnonymousCredits(getAnonymousUser().credits);
   }, []);
 
-  // Initialize mutation
+  // Initialize mutation first
   const generateDiagram = api.ai.generateDiagram.useMutation({
     onMutate: () => {
       setIsLoading(true);
@@ -112,17 +114,22 @@ export function DiagramGenerator() {
           description: data.message,
           variant: "default",
           duration: 3000,
+          className: "rounded",
         });
       } catch (err) {
         console.error("Mermaid render error:", err);
-        const errorMessage = err instanceof Error ? err.message : "Failed to render diagram";
+        const errorMessage =
+          err instanceof Error ? err.message : "Failed to render diagram";
         setError(errorMessage);
       }
     },
     onError: (err) => {
-      const errorMessage = err instanceof Error ? err.message : "Failed to generate diagram. Please try again with a different description.";
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to generate diagram. Please try again with a different description.";
       setError(errorMessage);
-      
+
       // Handle credit-related errors
       if (err instanceof Error) {
         if (err.message.includes("Please login to generate more diagrams")) {
@@ -130,28 +137,86 @@ export function DiagramGenerator() {
         } else if (err.message.includes("Insufficient credits")) {
           toast({
             title: "Out of Credits",
-            description: "You've used all your credits for today. Credits will reset tomorrow!",
+            description:
+              "You've used all your credits for today. Credits will reset tomorrow!",
             variant: "destructive",
             duration: 5000,
+            className: "rounded",
           });
         }
       }
     },
   });
 
+  // Then use it in the useEffect
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const textQuery = searchParams.get("text");
+
+    if (textQuery && !diagram && !hasInitialized.current) {
+      hasInitialized.current = true;
+      setInput(textQuery);
+
+      const generateFromQuery = async () => {
+        // Check credits first
+        if (session?.user && userCredits?.credits !== undefined) {
+          const requiredCredits = isComplex ? 2 : 1;
+          if (userCredits.credits < requiredCredits) {
+            toast({
+              title: "Insufficient Credits",
+              description: "You don't have enough credits for this operation.",
+              variant: "destructive",
+              duration: 5000,
+              className: "rounded",
+            });
+            return;
+          }
+        } else {
+          const requiredCredits = isComplex ? 2 : 1;
+          if (anonymousUser.credits < requiredCredits) {
+            setShowLoginDialog(true);
+            return;
+          }
+        }
+
+        generateDiagram.mutate({
+          text: textQuery,
+          isComplex,
+          anonymousId: !session?.user ? anonymousUser.id : undefined,
+        });
+
+        // Clear the URL query parameter after generation starts
+        window.history.replaceState({}, "", window.location.pathname);
+      };
+
+      void generateFromQuery();
+    }
+  }, [
+    session?.user,
+    userCredits?.credits,
+    isComplex,
+    anonymousUser.credits,
+    anonymousUser.id,
+    generateDiagram,
+    diagram,
+    toast,
+  ]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    
+
     // Check credits based on user type
     if (session?.user && userCredits?.credits !== undefined) {
       const requiredCredits = isComplex ? 2 : 1;
       if (userCredits.credits < requiredCredits) {
         toast({
           title: "Insufficient Credits",
-          description: "You don't have enough credits for this operation. Credits will reset tomorrow!",
+          description:
+            "You don't have enough credits for this operation. Credits will reset tomorrow!",
           variant: "destructive",
           duration: 5000,
+          className: "rounded",
         });
         return;
       }
@@ -163,14 +228,14 @@ export function DiagramGenerator() {
         return;
       }
     }
-    
+
     if (!input.trim()) {
       setError("Please enter some text to generate a diagram.");
       return;
     }
 
-    generateDiagram.mutate({ 
-      text: input, 
+    generateDiagram.mutate({
+      text: input,
       isComplex,
       anonymousId: !session?.user ? anonymousUser.id : undefined,
     });
@@ -184,6 +249,7 @@ export function DiagramGenerator() {
         description: "Diagram code copied to clipboard",
         variant: "default",
         duration: 2000,
+        className: "rounded",
       });
     } catch (err) {
       console.error(err);
@@ -192,6 +258,7 @@ export function DiagramGenerator() {
         description: "Failed to copy to clipboard",
         variant: "destructive",
         duration: 2000,
+        className: "rounded",
       });
     }
   };
@@ -219,6 +286,7 @@ export function DiagramGenerator() {
         description: "Failed to change theme",
         variant: "destructive",
         duration: 2000,
+        className: "rounded",
       });
     }
   };
@@ -233,7 +301,7 @@ export function DiagramGenerator() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={`Example: ${EXAMPLE_SUGGESTIONS[diagramType ?? "flowchart"]}`}
-                className="min-h-[128px] resize-y"
+                className="min-h-[128px] resize-y rounded-[0.75rem]"
                 disabled={isLoading}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -262,14 +330,10 @@ export function DiagramGenerator() {
                   </Label>
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {session?.user ? (
-                    `Credits: ${userCredits?.credits ?? 0} / 10`
-                  ) : (
-                    `Credits: ${anonymousCredits} / 5`
-                  )}
-                  {isComplex && (
-                    <span className="ml-1">(Uses 2 credits)</span>
-                  )}
+                  {session?.user
+                    ? `Credits: ${userCredits?.credits ?? 0} / 10`
+                    : `Credits: ${anonymousCredits} / 5`}
+                  {isComplex && <span className="ml-1">(Uses 2 credits)</span>}
                 </div>
               </div>
               {error && (
@@ -286,6 +350,7 @@ export function DiagramGenerator() {
                 variant="minimal"
                 onClick={handleReset}
                 disabled={isLoading || (!input && !diagram)}
+                className="min-w-[140px]"
               >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Reset
@@ -294,7 +359,7 @@ export function DiagramGenerator() {
                 type="submit"
                 variant="accent"
                 disabled={isLoading || !input.trim()}
-                className="min-w-[140px]"
+                className="min-w-[140px] "
               >
                 {isLoading ? (
                   <>
@@ -367,9 +432,9 @@ export function DiagramGenerator() {
         </Card>
       )}
 
-      <LoginDialog 
-        isOpen={showLoginDialog} 
-        onClose={() => setShowLoginDialog(false)} 
+      <LoginDialog
+        isOpen={showLoginDialog}
+        onClose={() => setShowLoginDialog(false)}
       />
     </div>
   );

@@ -4,7 +4,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, publicProcedure, protectedProcedure } from "@/server/api/trpc";
+import {
+  createTRPCRouter,
+  publicProcedure,
+  protectedProcedure,
+} from "@/server/api/trpc";
 import {
   determineDiagramType,
   generateDiagramWithAI,
@@ -36,7 +40,7 @@ export const aiRouter = createTRPCRouter({
         await validateAndUpdateUserCredits(
           ctx.session?.user?.id,
           input.anonymousId,
-          input.isComplex ?? false
+          input.isComplex ?? false,
         );
 
         let attempts = 0;
@@ -46,7 +50,7 @@ export const aiRouter = createTRPCRouter({
 
         // Use AI to determine the most suitable diagram type
         const suggestedType = await determineDiagramType(input.text);
-        
+
         if (!suggestedType) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
@@ -81,7 +85,8 @@ export const aiRouter = createTRPCRouter({
             validDiagram = mermaidCode;
             break;
           } catch (err) {
-            lastError = err instanceof Error ? err : new Error("Unknown error occurred");
+            lastError =
+              err instanceof Error ? err : new Error("Unknown error occurred");
             console.error(`Attempt ${attempts + 1} failed:`, lastError);
             attempts++;
           }
@@ -95,7 +100,10 @@ export const aiRouter = createTRPCRouter({
         }
 
         // Generate a title for the diagram
-        const generatedTitle = await generateDiagramTitle(input.text, suggestedType);
+        const generatedTitle = await generateDiagramTitle(
+          input.text,
+          suggestedType,
+        );
 
         // Store the diagram
         const diagram = await db.diagram.create({
@@ -121,31 +129,32 @@ export const aiRouter = createTRPCRouter({
         }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: error instanceof Error ? error.message : "An unknown error occurred",
+          message:
+            error instanceof Error
+              ? error.message
+              : "An unknown error occurred",
         });
       }
     }),
 
-  getUserDiagrams: protectedProcedure
-    .query(async ({ ctx }) => {
-      return db.diagram.findMany({
-        where: {
-          userId: ctx.session.user.id,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
-    }),
+  getUserDiagrams: protectedProcedure.query(async ({ ctx }) => {
+    return db.diagram.findMany({
+      where: {
+        userId: ctx.session.user.id,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+  }),
 
-  getUserCredits: protectedProcedure
-    .query(async ({ ctx }) => {
-      return db.userCredits.findUnique({
-        where: {
-          userId: ctx.session.user.id,
-        },
-      });
-    }),
+  getUserCredits: protectedProcedure.query(async ({ ctx }) => {
+    return db.userCredits.findUnique({
+      where: {
+        userId: ctx.session.user.id,
+      },
+    });
+  }),
 
   deleteDiagram: protectedProcedure
     .input(deleteDiagramSchema)
@@ -161,7 +170,8 @@ export const aiRouter = createTRPCRouter({
       if (!diagram) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Diagram not found or you don't have permission to delete it",
+          message:
+            "Diagram not found or you don't have permission to delete it",
         });
       }
 
