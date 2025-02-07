@@ -10,7 +10,43 @@ import { CSPostHogProvider } from "@/app/_components/posthog-provider";
 
 export const metadata: Metadata = {
   title: "Diagramify by Ani",
-  description: "Generate diagrams with AI",
+  description: "Generate beautiful diagrams instantly using AI. Transform your ideas into clear, professional diagrams with natural language.",
+  metadataBase: new URL('https://diagram.ani.ink'),
+  authors: [{ name: "Ani" }],
+  keywords: ["diagram generator", "AI diagrams", "flowchart maker", "sequence diagram", "UML diagrams", "mermaid diagrams"],
+  creator: "Ani",
+  publisher: "Diagramify",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://diagram.ani.ink",
+    title: "Diagramify by Ani",
+    description: "Generate beautiful diagrams instantly using AI. Transform your ideas into clear, professional diagrams with natural language.",
+    siteName: "Diagramify",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Diagramify - AI Powered Diagram Generator",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Diagramify by Ani",
+    description: "Generate beautiful diagrams instantly using AI. Transform your ideas into clear, professional diagrams with natural language.",
+    images: ["/og-image.png"],
+    creator: "@ani",
+  },
   icons: [
     { rel: "icon", url: "/favicon.ico" },
     {
