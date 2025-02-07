@@ -8,14 +8,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Copy, Download, ChevronDown } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Copy, ChevronDown } from "lucide-react";
+import { DiagramDownloadButton } from "./diagram-download-button";
 import { type Diagram } from "@/store/diagram-store";
 import { renderMermaidDiagram } from "@/lib/mermaid-config";
 import { useToast } from "@/hooks/use-toast";
@@ -70,88 +64,11 @@ export function DiagramPreviewModal({
     }
   };
 
-  const handleDownloadPNG = async () => {
-    try {
-      const response = await fetch('/api/export', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          content: diagram.content,
-          type: diagram.type,
-        }),
-      });
-
-      if (!response.ok) throw new Error('Export failed');
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${diagram.name ?? diagram.type}-diagram-${diagram.id}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "Success",
-        description: "Diagram downloaded as PNG",
-        variant: "default",
-        duration: 2000,
-      });
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to download diagram",
-        variant: "destructive",
-        duration: 2000,
-      });
-    }
-  };
-
-  const handleDownloadSVG = async () => {
-    try {
-      const element = document.querySelector(`#modal-diagram-${diagram.id} svg`);
-      if (!element) throw new Error("No diagram found");
-
-      const svgData = new XMLSerializer().serializeToString(element);
-      const blob = new Blob([svgData], { type: "image/svg+xml" });
-      const url = URL.createObjectURL(blob);
-      
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${diagram.name ?? diagram.type}-diagram-${diagram.id}.svg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "Success",
-        description: "Diagram downloaded as SVG",
-        variant: "default",
-        duration: 2000,
-      });
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to download diagram",
-        variant: "destructive",
-        duration: 2000,
-      });
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] w-[1200px] p-6 overflow-auto flex flex-col">
+      <DialogContent className="flex max-h-[95vh] w-[1200px] max-w-[95vw] flex-col overflow-auto p-6">
         <DialogHeader className="flex-shrink-0">
-          <DialogTitle>
-            {diagram.name ?? `${diagram.type} Diagram`}
-          </DialogTitle>
+          <DialogTitle>{diagram.name ?? `${diagram.type} Diagram`}</DialogTitle>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>{formatDistanceToNow(new Date(diagram.createdAt), { addSuffix: true })}</span>
             <span>•</span>
@@ -161,11 +78,11 @@ export function DiagramPreviewModal({
         <div className="relative">
           <div
             id={`modal-diagram-${diagram.id}`}
-            className="w-full min-h-[400px] flex items-center justify-center bg-muted/30 rounded-md overflow-hidden p-4"
+            className="flex min-h-[400px] w-full items-center justify-center overflow-hidden rounded-md bg-muted/30 p-4"
           >
             {/* Container for the Mermaid diagram */}
           </div>
-          <div className="absolute top-4 right-4 flex items-center gap-2">
+          <div className="absolute right-4 top-4 flex items-center gap-2">
             <Button
               variant="secondary"
               size="sm"
@@ -175,27 +92,16 @@ export function DiagramPreviewModal({
               <Copy className="h-4 w-4" />
               Copy Code
             </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="secondary" size="sm" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  Download
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleDownloadPNG}>
-                  Save as PNG
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleDownloadSVG}>
-                  Save as SVG
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <DiagramDownloadButton
+              content={diagram.content}
+              diagramId={`modal-diagram-${diagram.id}`}
+              name={diagram.name}
+              type={diagram.type}
+              showLabel={true}
+            />
           </div>
         </div>
       </DialogContent>
     </Dialog>
   );
-} 
+}

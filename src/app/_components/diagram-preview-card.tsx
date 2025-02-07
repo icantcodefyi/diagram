@@ -19,6 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { DiagramDownloadButton } from "./diagram-download-button";
 
 export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -71,10 +72,10 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
 
   const handleDownloadPNG = async () => {
     try {
-      const response = await fetch('/api/export', {
-        method: 'POST',
+      const response = await fetch("/api/export", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           content: diagram.content,
@@ -82,11 +83,11 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
         }),
       });
 
-      if (!response.ok) throw new Error('Export failed');
+      if (!response.ok) throw new Error("Export failed");
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
-      
+
       const link = document.createElement("a");
       link.href = url;
       link.download = `${diagram.name ?? diagram.type}-diagram-${diagram.id}.png`;
@@ -113,7 +114,7 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
 
   return (
     <>
-      <Card className="group relative overflow-hidden hover:shadow-lg transition-shadow duration-200">
+      <Card className="group relative overflow-hidden transition-shadow duration-200 hover:shadow-lg">
         <CardHeader className="space-y-1">
           <CardTitle className="text-lg">
             {diagram.name ?? `${diagram.type} Diagram`}
@@ -125,12 +126,12 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
           </div>
         </CardHeader>
         <CardContent>
-          <div 
-            id={`diagram-${diagram.id}`} 
-            className="w-full h-[200px] flex items-center justify-center bg-muted/30 rounded-md overflow-hidden"
+          <div
+            id={`diagram-${diagram.id}`}
+            className="flex h-[200px] w-full items-center justify-center overflow-hidden rounded-md bg-muted/30"
           />
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-200" />
-          <div className="absolute bottom-4 right-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <div className="absolute inset-0 bg-black/0 transition-colors duration-200 group-hover:bg-black/5" />
+          <div className="absolute bottom-4 right-4 flex items-center gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
             <Button
               variant="secondary"
               size="icon"
@@ -147,14 +148,13 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
             >
               <Copy className="h-4 w-4" />
             </Button>
-            <Button
-              variant="secondary"
-              size="icon"
-              onClick={handleDownloadPNG}
-              className="h-8 w-8"
-            >
-              <Download className="h-4 w-4" />
-            </Button>
+            <DiagramDownloadButton
+              content={diagram.content}
+              diagramId={diagram.id}
+              name={diagram.name}
+              type={diagram.type}
+              showLabel={false}
+            />
             <Button
               variant="secondary"
               size="icon"
@@ -173,12 +173,16 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
         onClose={() => setIsModalOpen(false)}
       />
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete your diagram.
+              This action cannot be undone. This will permanently delete your
+              diagram.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -197,4 +201,4 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
       </AlertDialog>
     </>
   );
-} 
+}

@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import React from "react";
 
 interface DiagramDownloadButtonProps {
   content: string;
@@ -34,82 +35,129 @@ export function DiagramDownloadButton({
 
   const handleDownloadPNG = async () => {
     try {
-      const svgElement = document.querySelector(`#diagram-${diagramId} svg`);
-      if (!svgElement) throw new Error("No diagram found");
+      let svgElement: SVGElement | null;
+      if (diagramId.startsWith("modal-diagram-")) {
+        svgElement = document.querySelector(`#${diagramId} svg`);
+      } else {
+        svgElement = document.querySelector(`#diagram-${diagramId} svg`);
+      }
 
-      // Create a canvas element
+      if (!svgElement) {
+        console.error("SVG element not found with ID:", diagramId);
+        throw new Error("No diagram found");
+      }
+
+      // Get the SVG dimensions
+      const svgRect = svgElement.getBoundingClientRect();
+
+      // Higher base scale and minimum size for better quality
+      const minSize = 1920; // Increased from 800 to 1920 (Full HD width)
+      const baseScale = 4; // Increased base scale from 2 to 4
+      const scale = Math.max(
+        baseScale,
+        minSize / Math.min(svgRect.width, svgRect.height),
+      );
+
+      // Clone and enhance the SVG
+      const svgClone = svgElement.cloneNode(true) as SVGElement;
+
+      // Enhance SVG quality
+      svgClone.setAttribute("width", String(svgRect.width));
+      svgClone.setAttribute("height", String(svgRect.height));
+      svgClone.setAttribute("shape-rendering", "geometricPrecision");
+      svgClone.setAttribute("text-rendering", "geometricPrecision");
+
+      // Ensure white background in SVG
+      const background = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "rect",
+      );
+      background.setAttribute("width", "100%");
+      background.setAttribute("height", "100%");
+      background.setAttribute("fill", "white");
+      svgClone.insertBefore(background, svgClone.firstChild);
+
+      // Convert SVG to a data URL with enhanced settings
+      const svgData = new XMLSerializer().serializeToString(svgClone);
+      const svgBase64 = window.btoa(unescape(encodeURIComponent(svgData)));
+      const dataUrl = `data:image/svg+xml;base64,${svgBase64}`;
+
+      // Create a high-resolution canvas
       const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d", { alpha: false });
+      canvas.width = svgRect.width * scale;
+      canvas.height = svgRect.height * scale;
+
+      // Get context with optimal settings
+      const ctx = canvas.getContext("2d", {
+        alpha: false,
+        willReadFrequently: false,
+        desynchronized: true,
+      });
       if (!ctx) throw new Error("Canvas context not supported");
 
       // Create a new image
       const img = new Image();
-      img.crossOrigin = "anonymous";
 
-      // Get the SVG dimensions
-      const svgRect = svgElement.getBoundingClientRect();
-      // Scale factor for higher quality (2x)
-      const scale = 2;
+      // Set up image loading promise
+      const imageLoadPromise = new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
 
-      // Convert SVG to data URL with proper scaling
-      const svgData = new XMLSerializer().serializeToString(svgElement);
-      // Add width and height to the SVG string to ensure proper scaling
-      const svgWithSize = svgData.replace(
-        "<svg",
-        `<svg width="${svgRect.width}" height="${svgRect.height}"`,
-      );
-      const svgBase64 = btoa(unescape(encodeURIComponent(svgWithSize)));
-      const dataUrl = `data:image/svg+xml;base64,${svgBase64}`;
-
-      // Handle image loading
-      img.onload = () => {
-        // Set canvas dimensions with scaling
-        canvas.width = svgRect.width * scale;
-        canvas.height = svgRect.height * scale;
-
-        // Apply better rendering settings
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-
-        // Draw white background
-        ctx.fillStyle = "white";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Scale the context to draw the image larger
-        ctx.scale(scale, scale);
-        ctx.drawImage(img, 0, 0);
-
-        // Convert to PNG and download with higher quality
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) throw new Error("Failed to create PNG");
-            const pngUrl = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = pngUrl;
-            link.download = `${name ?? type}-diagram-${diagramId}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(pngUrl);
-          },
-          "image/png",
-          1.0, // Maximum quality
-        );
-      };
-
+      // Set the image source
       img.src = dataUrl;
+
+      // Wait for image to load
+      await imageLoadPromise;
+
+      // Apply high-quality rendering settings
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+
+      // Use better compositing
+      ctx.globalCompositeOperation = "source-over";
+
+      // Draw white background
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Scale with high-quality transform
+      ctx.scale(scale, scale);
+
+      // Draw image with crisp edges
+      ctx.translate(0.5, 0.5);
+      ctx.drawImage(img, 0, 0);
+      ctx.translate(-0.5, -0.5);
+
+      // Get the PNG blob with maximum quality
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/png", 1.0),
+      );
+
+      if (!blob) throw new Error("Failed to create PNG");
+
+      // Download the file
+      const pngUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = pngUrl;
+      link.download = `${name ?? type}-diagram-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(pngUrl);
 
       toast({
         title: "Success",
-        description: "High-quality diagram downloaded as PNG",
+        description: "High-resolution diagram downloaded as PNG",
         variant: "default",
         duration: 2000,
       });
     } catch (err) {
-      console.error(err);
+      console.error("Download error:", err);
       toast({
         title: "Error",
-        description: "Failed to download diagram",
+        description:
+          err instanceof Error ? err.message : "Failed to download diagram",
         variant: "destructive",
         duration: 2000,
       });
@@ -118,8 +166,18 @@ export function DiagramDownloadButton({
 
   const handleDownloadSVG = async () => {
     try {
-      const element = document.querySelector(`#diagram-${diagramId} svg`);
-      if (!element) throw new Error("No diagram found");
+      // Fix the selector to work with both modal and regular diagrams
+      let element: SVGElement | null;
+      if (diagramId.startsWith("modal-diagram-")) {
+        element = document.querySelector(`#${diagramId} svg`);
+      } else {
+        element = document.querySelector(`#diagram-${diagramId} svg`);
+      }
+
+      if (!element) {
+        console.error("SVG element not found with ID:", diagramId);
+        throw new Error("No diagram found");
+      }
 
       const svgData = new XMLSerializer().serializeToString(element);
       const blob = new Blob([svgData], { type: "image/svg+xml" });
@@ -127,7 +185,7 @@ export function DiagramDownloadButton({
 
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${name ?? type}-diagram-${diagramId}.svg`;
+      link.download = `${name ?? type}-diagram-${Date.now()}.svg`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -140,10 +198,11 @@ export function DiagramDownloadButton({
         duration: 2000,
       });
     } catch (err) {
-      console.error(err);
+      console.error("SVG download error:", err);
       toast({
         title: "Error",
-        description: "Failed to download diagram",
+        description:
+          err instanceof Error ? err.message : "Failed to download diagram",
         variant: "destructive",
         duration: 2000,
       });
