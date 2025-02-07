@@ -38,7 +38,6 @@ const defaultConfig = {
   },
 } as const;
 
-let initialized = false;
 let currentTheme: MermaidTheme = "default";
 const svgCache = new Map<string, string>();
 
@@ -49,8 +48,6 @@ export const initializeMermaid = async (theme: MermaidTheme = "default") => {
     ...defaultConfig,
     theme,
   });
-  
-  initialized = true;
 };
 
 export const validateDiagram = async (diagram: string): Promise<boolean> => {
