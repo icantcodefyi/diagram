@@ -73,13 +73,16 @@ export function Hero() {
           initial={{ y: 10, opacity: 0 }}
           transition={{ delay: 0.6, duration: 0.4 }}
         >
-          <Image
-            alt="SaaS Dashboard"
-            src="/landing/Desktop---104.png"
-            width={1100}
-            height={698}
-            priority
-          />
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="rounded-lg shadow-lg"
+          >
+            <source src="/video.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
         </motion.div>
       </div>
       <div className="container mt-14 max-w-5xl">
