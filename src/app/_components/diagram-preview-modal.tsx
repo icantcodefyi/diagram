@@ -53,6 +53,7 @@ export function DiagramPreviewModal({
         description: "Diagram code copied to clipboard",
         variant: "default",
         duration: 2000,
+        className: "rounded",
       });
     } catch (err) {
       console.error(err);
@@ -61,6 +62,7 @@ export function DiagramPreviewModal({
         description: "Failed to copy code to clipboard",
         variant: "destructive",
         duration: 2000,
+        className: "rounded",
       });
     }
   };

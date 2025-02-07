@@ -34,6 +34,7 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
         description: "Diagram deleted successfully",
         variant: "default",
         duration: 2000,
+        className: "rounded",
       });
       void utils.ai.getUserDiagrams.invalidate();
     },
@@ -43,6 +44,7 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
         description: error.message || "Failed to delete diagram",
         variant: "destructive",
         duration: 2000,
+        className: "rounded",
       });
     },
   });
@@ -59,6 +61,7 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
         description: "Diagram code copied to clipboard",
         variant: "default",
         duration: 2000,
+        className: "rounded",
       });
     } catch (err) {
       console.error(err);
@@ -67,6 +70,7 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
         description: "Failed to copy code to clipboard",
         variant: "destructive",
         duration: 2000,
+        className: "rounded",
       });
     }
   };

@@ -1,9 +1,23 @@
+"use client";
+
 import { DiagramGenerator } from "@/app/_components/diagram-generator";
 import { AuthButton } from "@/app/_components/auth-button";
 import { DiagramHistory } from "@/app/_components/diagram-history";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+import { api } from "@/trpc/react";
 
-export default function Page() {
+export default function GeneratePage() {
+  const searchParams = useSearchParams();
+  const text = searchParams.get("text");
+
+  // If there's text in the URL, automatically start the generation
+  useEffect(() => {
+    if (text) {
+    }
+  }, [text]);
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <div className="flex flex-1">

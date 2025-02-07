@@ -170,6 +170,7 @@ export function DiagramDownloadButton({
         description: "High-resolution diagram downloaded as PNG",
         variant: "default",
         duration: 2000,
+        className: "rounded",
       });
     } catch (err) {
       console.error("Download error:", err);
@@ -179,6 +180,7 @@ export function DiagramDownloadButton({
           err instanceof Error ? err.message : "Failed to download diagram",
         variant: "destructive",
         duration: 2000,
+        className: "rounded",
       });
     }
   };
@@ -215,6 +217,7 @@ export function DiagramDownloadButton({
         description: "Diagram downloaded as SVG",
         variant: "default",
         duration: 2000,
+        className: "rounded",
       });
     } catch (err) {
       console.error("SVG download error:", err);
@@ -224,6 +227,7 @@ export function DiagramDownloadButton({
           err instanceof Error ? err.message : "Failed to download diagram",
         variant: "destructive",
         duration: 2000,
+        className: "rounded",
       });
     }
   };
