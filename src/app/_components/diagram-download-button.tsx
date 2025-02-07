@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
+import { getCurrentTheme } from "@/lib/mermaid-config";
 
 interface DiagramDownloadButtonProps {
   content: string;
@@ -35,24 +36,41 @@ export function DiagramDownloadButton({
 
   const handleDownloadPNG = async () => {
     try {
-      let svgElement: SVGElement | null;
-      if (diagramId.startsWith("modal-diagram-")) {
-        svgElement = document.querySelector(`#${diagramId} svg`);
-      } else {
-        svgElement = document.querySelector(`#diagram-${diagramId} svg`);
+      // Add a small delay to ensure the SVG is rendered
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Try multiple selectors to find the SVG
+      let svgElement: SVGElement | null = null;
+      const selectors = [
+        `#${diagramId} svg`,
+        `#diagram-${diagramId} svg`,
+        `#${diagramId} .mermaid svg`,
+        `#diagram-${diagramId} .mermaid svg`,
+      ];
+
+      for (const selector of selectors) {
+        svgElement = document.querySelector(selector);
+        if (svgElement) break;
       }
 
       if (!svgElement) {
-        console.error("SVG element not found with ID:", diagramId);
-        throw new Error("No diagram found");
+        console.error("SVG element not found. Tried selectors:", selectors);
+        console.log("Current diagramId:", diagramId);
+        console.log("Available elements:", document.querySelectorAll("svg"));
+        throw new Error("No diagram found - please try again");
       }
+
+      // Get the current theme and set background color accordingly
+      const currentTheme = getCurrentTheme();
+      const isDarkTheme = ["dark", "forest"].includes(currentTheme);
+      const backgroundColor = isDarkTheme ? "#0f172a" : "#ffffff"; // slate-900 for dark, white for light
 
       // Get the SVG dimensions
       const svgRect = svgElement.getBoundingClientRect();
 
       // Higher base scale and minimum size for better quality
-      const minSize = 1920; // Increased from 800 to 1920 (Full HD width)
-      const baseScale = 4; // Increased base scale from 2 to 4
+      const minSize = 1920;
+      const baseScale = 4;
       const scale = Math.max(
         baseScale,
         minSize / Math.min(svgRect.width, svgRect.height),
@@ -67,14 +85,14 @@ export function DiagramDownloadButton({
       svgClone.setAttribute("shape-rendering", "geometricPrecision");
       svgClone.setAttribute("text-rendering", "geometricPrecision");
 
-      // Ensure white background in SVG
+      // Add background that matches the theme
       const background = document.createElementNS(
         "http://www.w3.org/2000/svg",
         "rect",
       );
       background.setAttribute("width", "100%");
       background.setAttribute("height", "100%");
-      background.setAttribute("fill", "white");
+      background.setAttribute("fill", backgroundColor);
       svgClone.insertBefore(background, svgClone.firstChild);
 
       // Convert SVG to a data URL with enhanced settings
@@ -117,8 +135,8 @@ export function DiagramDownloadButton({
       // Use better compositing
       ctx.globalCompositeOperation = "source-over";
 
-      // Draw white background
-      ctx.fillStyle = "white";
+      // Draw background
+      ctx.fillStyle = backgroundColor;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Scale with high-quality transform
