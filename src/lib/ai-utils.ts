@@ -303,3 +303,47 @@ ${complexityGuidelines.join("\n")}`;
     void processQueue();
   });
 };
+
+// Function to generate a concise title for a diagram
+export const generateDiagramTitle = async (text: string, diagramType: DiagramType): Promise<string> => {
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite-preview-02-05" });
+
+  const prompt = `Generate a short, concise, and descriptive title (maximum 50 characters) for a ${diagramType} diagram based on this text. The title should capture the main concept or purpose of the diagram.
+
+Text to generate title for: "${text}"
+
+Rules:
+1. Maximum 50 characters
+2. Be descriptive but concise
+3. Focus on the main concept
+4. No quotes or special characters
+5. Return only the title, nothing else
+
+Example titles:
+- User Authentication Flow
+- Project Dependencies
+- Order Processing System
+- Team Hierarchy Structure`;
+
+  return new Promise((resolve, reject) => {
+    const request = async () => {
+      try {
+        const result = await makeAPIRequestWithRetry(async () => {
+          const response = await model.generateContent(prompt);
+          return response;
+        });
+
+        const title = result.response.text().trim();
+        // Ensure title is not too long and remove any quotes
+        const cleanTitle = title.replace(/["']/g, "").slice(0, 50);
+        resolve(cleanTitle || "Untitled Diagram");
+      } catch (error) {
+        console.error("Error generating diagram title:", error);
+        resolve("Untitled Diagram");
+      }
+    };
+
+    requestQueue.push(request);
+    void processQueue();
+  });
+};

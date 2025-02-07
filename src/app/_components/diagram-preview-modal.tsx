@@ -19,9 +19,13 @@ import {
 import { type Diagram } from "@/store/diagram-store";
 import { renderMermaidDiagram } from "@/lib/mermaid-config";
 import { useToast } from "@/hooks/use-toast";
+import { type RouterOutputs } from "@/trpc/react";
+import { formatDistanceToNow } from "date-fns";
+
+type DiagramType = RouterOutputs["diagram"]["getUserDiagrams"][number];
 
 interface DiagramPreviewModalProps {
-  diagram: Diagram;
+  diagram: Diagram | DiagramType;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -39,7 +43,7 @@ export function DiagramPreviewModal({
       const timer = setTimeout(() => {
         void renderMermaidDiagram(
           diagram.content,
-          `modal-diagram-${diagram.id}`,
+          `#modal-diagram-${diagram.id}`,
         );
       }, 100);
 
@@ -149,7 +153,7 @@ export function DiagramPreviewModal({
             {diagram.name ?? `${diagram.type} Diagram`}
           </DialogTitle>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>{new Date(diagram.createdAt).toLocaleDateString()}</span>
+            <span>{formatDistanceToNow(new Date(diagram.createdAt), { addSuffix: true })}</span>
             <span>•</span>
             <span>{diagram.isComplex ? "Complex" : "Simple"}</span>
           </div>

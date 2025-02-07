@@ -7,6 +7,7 @@ import { createTRPCRouter, publicProcedure, protectedProcedure } from "@/server/
 import {
   determineDiagramType,
   generateDiagramWithAI,
+  generateDiagramTitle,
 } from "@/lib/ai-utils";
 import { db } from "@/server/db";
 
@@ -124,6 +125,9 @@ export const aiRouter = createTRPCRouter({
           });
         }
 
+        // Generate a title for the diagram
+        const generatedTitle = await generateDiagramTitle(input.text, suggestedType);
+
         // Only deduct credits and store diagram after successful generation
         if (ctx.session?.user) {
           const userCredits = await db.userCredits.findUnique({
@@ -169,7 +173,7 @@ export const aiRouter = createTRPCRouter({
           data: {
             content: validDiagram,
             type: suggestedType,
-            name: input.name,
+            name: generatedTitle,
             isComplex: input.isComplex ?? false,
             userId: ctx.session?.user?.id,
           },
