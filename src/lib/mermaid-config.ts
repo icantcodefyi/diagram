@@ -1,39 +1,51 @@
 import mermaid from "mermaid";
 
+export type MermaidTheme = 
+  | "default" 
+  | "forest" 
+  | "dark" 
+  | "neutral" 
+  | "base";
+
+const defaultConfig = {
+  startOnLoad: true,
+  securityLevel: "loose",
+  fontFamily: "arial",
+  logLevel: "error",
+  flowchart: {
+    curve: "basis",
+    padding: 20,
+  },
+  sequence: {
+    actorMargin: 50,
+    messageMargin: 40,
+  },
+  er: {
+    layoutDirection: "TB",
+    minEntityWidth: 100,
+  },
+  journey: {
+    taskMargin: 50,
+  },
+  gitGraph: {
+    showCommitLabel: true,
+  },
+  c4: {
+    diagramMarginY: 50,
+    c4ShapeMargin: 20,
+  },
+} as const;
+
 let initialized = false;
+let currentTheme: MermaidTheme = "default";
 const svgCache = new Map<string, string>();
 
-export const initializeMermaid = async () => {
-  if (initialized) return;
+export const initializeMermaid = async (theme: MermaidTheme = "default") => {
+  currentTheme = theme;
   
   mermaid.initialize({
-    startOnLoad: true,
-    theme: "default",
-    securityLevel: "loose",
-    fontFamily: "arial",
-    logLevel: "error",
-    flowchart: {
-      curve: "basis",
-      padding: 20,
-    },
-    sequence: {
-      actorMargin: 50,
-      messageMargin: 40,
-    },
-    er: {
-      layoutDirection: "TB",
-      minEntityWidth: 100,
-    },
-    journey: {
-      taskMargin: 50,
-    },
-    gitGraph: {
-      showCommitLabel: true,
-    },
-    c4: {
-      diagramMarginY: 50,
-      c4ShapeMargin: 20,
-    },
+    ...defaultConfig,
+    theme,
   });
   
   initialized = true;
@@ -54,11 +66,11 @@ export const renderMermaidDiagram = async (diagram: string, elementId: string) =
   if (!element) return;
 
   try {
-    // Ensure Mermaid is initialized
-    await initializeMermaid();
+    // Ensure Mermaid is initialized with current theme
+    await initializeMermaid(currentTheme);
     
-    // Check cache first
-    const cacheKey = `${diagram}-${elementId}`;
+    // Check cache first - include theme in cache key
+    const cacheKey = `${diagram}-${elementId}-${currentTheme}`;
     const cachedSvg = svgCache.get(cacheKey);
     
     if (cachedSvg) {
@@ -73,12 +85,18 @@ export const renderMermaidDiagram = async (diagram: string, elementId: string) =
     element.innerHTML = '';
     
     try {
+      // Re-initialize mermaid with current theme before rendering
+      mermaid.initialize({
+        ...defaultConfig,
+        theme: currentTheme
+      });
+      
       // If parsing succeeds, render the diagram
       const { svg } = await mermaid.render(uniqueId, diagram);
       
       if (svg) {
         element.innerHTML = svg;
-        // Cache the result
+        // Cache the result with theme
         svgCache.set(cacheKey, svg);
       }
     } catch (parseError) {
@@ -89,4 +107,16 @@ export const renderMermaidDiagram = async (diagram: string, elementId: string) =
     console.error('Failed to render diagram:', error);
     throw error;
   }
-}; 
+};
+
+export const changeTheme = async (theme: MermaidTheme) => {
+  if (currentTheme === theme) return;
+  
+  currentTheme = theme;
+  await initializeMermaid(theme);
+  
+  // Clear cache when theme changes
+  svgCache.clear();
+};
+
+export const getCurrentTheme = (): MermaidTheme => currentTheme; 

@@ -20,7 +20,13 @@ import {
   EXAMPLE_SUGGESTIONS,
   type DiagramType,
 } from "@/types/diagram";
-import { initializeMermaid, renderMermaidDiagram } from "@/lib/mermaid-config";
+import {
+  initializeMermaid,
+  renderMermaidDiagram,
+  changeTheme,
+  getCurrentTheme,
+  type MermaidTheme,
+} from "@/lib/mermaid-config";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -36,14 +42,23 @@ export function DiagramGenerator() {
   const [input, setInput] = useState("");
   const [diagram, setDiagram] = useState("");
   const [diagramType, setDiagramType] = useState<DiagramType | null>(null);
+  const [currentTheme, setCurrentTheme] = useState<MermaidTheme>("default");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isComplex, setIsComplex] = useState(false);
   const { toast } = useToast();
 
+  const themes: { label: string; value: MermaidTheme }[] = [
+    { label: "Default", value: "default" },
+    { label: "Forest", value: "forest" },
+    { label: "Dark", value: "dark" },
+    { label: "Neutral", value: "neutral" },
+    { label: "Base", value: "base" },
+  ];
+
   useEffect(() => {
     // Initialize Mermaid when component mounts
-    void initializeMermaid();
+    void initializeMermaid(currentTheme);
   }, []);
 
   // Initialize mutation
@@ -137,6 +152,24 @@ export function DiagramGenerator() {
     if (element) element.innerHTML = "";
   };
 
+  const handleThemeChange = async (theme: MermaidTheme) => {
+    try {
+      setCurrentTheme(theme);
+      await changeTheme(theme);
+      if (diagram) {
+        await renderMermaidDiagram(diagram, "#mermaid-diagram");
+      }
+    } catch (err) {
+      console.error("Failed to change theme:", err);
+      toast({
+        title: "Error",
+        description: "Failed to change theme",
+        variant: "destructive",
+        duration: 2000,
+      });
+    }
+  };
+
   return (
     <div className="container max-w-4xl space-y-6 py-6">
       <Card className="border-none shadow-none">
@@ -185,7 +218,7 @@ export function DiagramGenerator() {
             <div className="flex justify-between gap-2">
               <Button
                 type="button"
-                variant="secondary"
+                variant="minimal"
                 onClick={handleReset}
                 disabled={isLoading || (!input && !diagram)}
               >
@@ -232,6 +265,24 @@ export function DiagramGenerator() {
             </div>
           </CardContent>
           <CardFooter className="flex justify-end gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="sm">
+                  Theme
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {themes.map((theme) => (
+                  <DropdownMenuItem
+                    key={theme.value}
+                    onClick={() => void handleThemeChange(theme.value)}
+                  >
+                    {theme.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="secondary"
               size="sm"

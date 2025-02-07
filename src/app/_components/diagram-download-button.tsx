@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/texturebutton";
 import { Download, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -17,7 +17,7 @@ interface DiagramDownloadButtonProps {
   diagramId: string;
   name?: string | null;
   type: string;
-  variant?: "default" | "secondary";
+  variant?: "minimal" | "secondary";
   size?: "default" | "sm";
   showLabel?: boolean;
 }
@@ -213,7 +213,7 @@ export function DiagramDownloadButton({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant={variant} size={size} className="gap-2">
-          <Download className="h-4 w-4" />
+          <Download className="mr-2 h-4 w-4" />
           {showLabel && "Download"}
           <ChevronDown className="h-4 w-4" />
         </Button>
