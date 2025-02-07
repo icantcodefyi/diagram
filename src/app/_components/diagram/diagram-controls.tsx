@@ -52,7 +52,7 @@ export function DiagramControls({
   return (
     <TooltipProvider>
       <div className={cn("flex items-center gap-2", className)}>
-        <div className="flex items-center gap-1 rounded-lg border bg-background/80 p-1.5 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center gap-1 rounded-lg p-1.5">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -101,7 +101,7 @@ export function DiagramControls({
           </Tooltip>
         </div>
 
-        <div className="flex items-center gap-1 rounded-lg border bg-background/80 p-1.5 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center gap-1 rounded-lg p-1.5">
           <DropdownMenu>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -141,7 +141,7 @@ export function DiagramControls({
                 onClick={onCopy}
                 className="h-7 gap-1 border bg-background hover:bg-accent hover:text-accent-foreground"
               >
-                <Copy className="h-4 w-4" />
+                <Copy className="mr-2 h-4 w-4" />
                 {showLabel && "Copy"}
               </Button>
             </TooltipTrigger>

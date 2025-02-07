@@ -18,8 +18,8 @@ export const THEMES: { label: string; value: MermaidTheme }[] = [
 
 const ZOOM_STEP = 0.25;
 const MIN_ZOOM = 0.5;
-const MAX_ZOOM = 3;
-const DEFAULT_SCALE = 2;
+const MAX_ZOOM = 5;
+const DEFAULT_SCALE = 3;
 
 interface UseDiagramPreviewProps {
   diagram: string;
