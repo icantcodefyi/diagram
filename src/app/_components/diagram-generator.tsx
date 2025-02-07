@@ -15,7 +15,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader, Copy, RefreshCw, Download, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { DIAGRAM_TYPES, EXAMPLE_SUGGESTIONS, type DiagramType } from "@/types/diagram";
+import {
+  DIAGRAM_TYPES,
+  EXAMPLE_SUGGESTIONS,
+  type DiagramType,
+} from "@/types/diagram";
 import { initializeMermaid, renderMermaidDiagram } from "@/lib/mermaid-config";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -26,6 +30,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { DiagramDownloadButton } from "./diagram-download-button";
 
 export function DiagramGenerator() {
   const [input, setInput] = useState("");
@@ -59,10 +64,10 @@ export function DiagramGenerator() {
       try {
         setDiagram(data.diagram);
         setDiagramType(data.type);
-        
+
         // Add a small delay to ensure DOM is ready
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
         // Render the new diagram
         await renderMermaidDiagram(data.diagram, "#mermaid-diagram");
 
@@ -74,12 +79,13 @@ export function DiagramGenerator() {
         });
       } catch (err) {
         console.error("Mermaid render error:", err);
-        const errorMessage = err instanceof Error ? err.message : "Unknown error";
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown error";
         setError(errorMessage);
-        generateDiagram.mutate({ 
-          text: input, 
+        generateDiagram.mutate({
+          text: input,
           isComplex,
-          previousError: errorMessage 
+          previousError: errorMessage,
         });
       }
     },
@@ -122,83 +128,6 @@ export function DiagramGenerator() {
     }
   };
 
-  const handleDownloadPNG = async () => {
-    try {
-      const response = await fetch('/api/export', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          content: diagram,
-          type: diagramType,
-        }),
-      });
-
-      if (!response.ok) throw new Error('Export failed');
-
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `diagram-${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "Success",
-        description: "Diagram downloaded as PNG",
-        variant: "default",
-        duration: 2000,
-      });
-    } catch (err) {
-      console.error(err);
-      toast({
-        title: "Error",
-        description: "Failed to download diagram",
-        variant: "destructive",
-        duration: 2000,
-      });
-    }
-  };
-
-  const handleDownloadSVG = async () => {
-    try {
-      const element = document.querySelector("#mermaid-diagram svg");
-      if (!element) throw new Error("No diagram found");
-
-      const svgData = new XMLSerializer().serializeToString(element);
-      const blob = new Blob([svgData], { type: "image/svg+xml" });
-      const url = URL.createObjectURL(blob);
-      
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `diagram-${Date.now()}.svg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "Success",
-        description: "Diagram downloaded as SVG",
-        variant: "default",
-        duration: 2000,
-      });
-    } catch (err) {
-      console.error(err);
-      toast({
-        title: "Error",
-        description: "Failed to download diagram",
-        variant: "destructive",
-        duration: 2000,
-      });
-    }
-  };
-
   const handleReset = () => {
     setInput("");
     setDiagram("");
@@ -210,7 +139,7 @@ export function DiagramGenerator() {
 
   return (
     <div className="container max-w-4xl space-y-6 py-6">
-      <Card className="shadow-none border-none">
+      <Card className="border-none shadow-none">
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -221,7 +150,7 @@ export function DiagramGenerator() {
                 className="min-h-[128px] resize-y"
                 disabled={isLoading}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === "Enter") {
                     if (!e.shiftKey) {
                       e.preventDefault();
                       if (!isLoading && input.trim()) {
@@ -238,7 +167,10 @@ export function DiagramGenerator() {
                   onCheckedChange={setIsComplex}
                   disabled={isLoading}
                 />
-                <Label htmlFor="complex-mode" className="text-sm text-muted-foreground cursor-pointer select-none">
+                <Label
+                  htmlFor="complex-mode"
+                  className="cursor-pointer select-none text-sm text-muted-foreground"
+                >
                   Generate detailed and sophisticated diagram
                 </Label>
               </div>
@@ -284,17 +216,19 @@ export function DiagramGenerator() {
         <Card>
           <CardHeader>
             <CardTitle className="text-xl">
-              {diagramType && `${diagramType.charAt(0).toUpperCase() + diagramType.slice(1)} Diagram`}
+              {diagramType &&
+                `${diagramType.charAt(0).toUpperCase() + diagramType.slice(1)} Diagram`}
             </CardTitle>
             {diagramType && (
-              <CardDescription>
-                {DIAGRAM_TYPES[diagramType]}
-              </CardDescription>
+              <CardDescription>{DIAGRAM_TYPES[diagramType]}</CardDescription>
             )}
           </CardHeader>
           <CardContent>
             <div className="rounded-lg bg-white p-4 dark:bg-slate-900">
-              <div id="mermaid-diagram" className="overflow-x-auto flex justify-center"></div>
+              <div
+                id="mermaid-diagram"
+                className="flex justify-center overflow-x-auto"
+              ></div>
             </div>
           </CardContent>
           <CardFooter className="flex justify-end gap-2">
@@ -307,15 +241,12 @@ export function DiagramGenerator() {
               <Copy className="mr-2 h-4 w-4" />
               Copy Code
             </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleDownloadPNG}
-              className="text-sm"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Download PNG
-            </Button>
+            <DiagramDownloadButton
+              content={diagram}
+              diagramId="mermaid-diagram"
+              type={diagramType ?? "diagram"}
+              showLabel={true}
+            />
           </CardFooter>
         </Card>
       )}
