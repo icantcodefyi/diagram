@@ -26,9 +26,11 @@ export function DiagramHistory() {
     undefined,
     {
       enabled: !!session?.user,
-    }
+    },
   );
-  const [selectedDiagram, setSelectedDiagram] = useState<DiagramType | null>(null);
+  const [selectedDiagram, setSelectedDiagram] = useState<DiagramType | null>(
+    null,
+  );
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
@@ -41,10 +43,10 @@ export function DiagramHistory() {
   };
 
   const HistoryContent = () => (
-    <div className="p-4">
+    <div className="glassmorphism p-4">
       <Button
         variant="link"
-        className="w-full mb-4 flex items-start justify-start"
+        className="mb-4 flex w-full items-start justify-start"
         onClick={() => {
           if (!session?.user) {
             handleHistoryClick();
@@ -55,7 +57,7 @@ export function DiagramHistory() {
       >
         <span className="font-semibold">History</span>
       </Button>
-      
+
       {(!isCollapsed || isMobile) && (
         <ScrollArea className="h-auto max-h-[60vh]">
           <div className="space-y-2">
@@ -64,11 +66,11 @@ export function DiagramHistory() {
                 <Button
                   key={i}
                   variant="link"
-                  className="w-full text-left justify-start h-auto py-2"
+                  className="h-auto w-full justify-start py-2 text-left"
                   disabled
                 >
-                  <div className="flex flex-col w-full">
-                    <Skeleton className="h-5 w-3/4 mb-1" />
+                  <div className="flex w-full flex-col">
+                    <Skeleton className="mb-1 h-5 w-3/4" />
                     <Skeleton className="h-4 w-1/2" />
                   </div>
                 </Button>
@@ -78,7 +80,7 @@ export function DiagramHistory() {
                 <Button
                   key={i}
                   variant="link"
-                  className="w-full text-left justify-start h-auto py-2"
+                  className="h-auto w-full justify-start py-2 text-left"
                   onClick={handleHistoryClick}
                 >
                   <div className="flex flex-col">
@@ -90,19 +92,26 @@ export function DiagramHistory() {
                 </Button>
               ))
             ) : diagrams?.length === 0 ? (
-              <p className="text-sm text-center text-muted-foreground">No diagrams yet</p>
+              <p className="text-center text-sm text-muted-foreground">
+                No diagrams yet
+              </p>
             ) : (
               diagrams?.map((diagram) => (
                 <Button
                   key={diagram.id}
                   variant="link"
-                  className="w-full text-left justify-start h-auto py-2"
+                  className="h-auto w-full justify-start py-2 text-left"
                   onClick={() => setSelectedDiagram(diagram)}
                 >
                   <div className="flex flex-col">
-                    <span className="font-medium">{diagram.name ?? "Untitled Diagram"}</span>
+                    <span className="font-medium">
+                      {diagram.name ?? "Untitled Diagram"}
+                    </span>
                     <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(diagram.createdAt), { addSuffix: true })} • {diagram.type}
+                      {formatDistanceToNow(new Date(diagram.createdAt), {
+                        addSuffix: true,
+                      })}{" "}
+                      • {diagram.type}
                     </span>
                   </div>
                 </Button>
@@ -120,7 +129,7 @@ export function DiagramHistory() {
         <>
           <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
             <DrawerTrigger asChild>
-              <Button variant="link" className="fixed top-4 left-4 z-50">
+              <Button variant="link" className="fixed left-4 top-4 z-50">
                 History
               </Button>
             </DrawerTrigger>
@@ -137,7 +146,7 @@ export function DiagramHistory() {
           )}
         </>
       ) : (
-        <div className="fixed top-0 left-0 z-50 w-[300px]">
+        <div className="fixed left-0 top-0 z-50 w-[300px]">
           <HistoryContent />
           {selectedDiagram && (
             <DiagramPreviewModal
@@ -168,4 +177,4 @@ export function DiagramHistory() {
       </Dialog>
     </>
   );
-} 
+}
