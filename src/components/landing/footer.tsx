@@ -57,8 +57,20 @@ export function Footer() {
         <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
           Docs
         </Link>
+      </div>
+      <div className="mt-10 flex basis-1/2 flex-col gap-5 md:mt-0 md:basis-auto">
+        <h3 className="font-semibold">Resources</h3>
         <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-          Download
+          Community
+        </Link>
+        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
+          Contact
+        </Link>
+        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
+          Privacy Policy
+        </Link>
+        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
+          Terms of service
         </Link>
       </div>
       <div className="mt-10 flex basis-1/2 flex-col gap-5 md:mt-0 md:basis-auto">
@@ -70,49 +82,13 @@ export function Footer() {
           Blog
         </Link>
         <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-          Careers
-        </Link>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-          Customers
-        </Link>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
           Brand
-        </Link>
-      </div>
-      <div className="mt-10 flex basis-1/2 flex-col gap-5 md:mt-0 md:basis-auto">
-        <h3 className="font-semibold">Resources</h3>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-          Startup Program
-        </Link>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-          Community
-        </Link>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-          Contact
-        </Link>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-          DPA
-        </Link>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-          Privacy Policy
-        </Link>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-          Terms of service
         </Link>
       </div>
       <div className="mt-10 flex basis-1/2 flex-col gap-5 md:mt-0 md:basis-auto">
         <h3 className="font-semibold">Developers</h3>
         <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-          API
-        </Link>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-          Status
-        </Link>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-          GitHub
-        </Link>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-          Docs
+          Coming Soon
         </Link>
       </div>
     </footer>

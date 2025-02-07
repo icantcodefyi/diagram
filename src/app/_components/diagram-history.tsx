@@ -41,7 +41,7 @@ export function DiagramHistory() {
   };
 
   const HistoryContent = () => (
-    <div className="glassmorphism p-4 h-screen overflow-y-auto">
+    <div className={`p-4 h-screen overflow-y-auto ${!isCollapsed || isMobile ? "glassmorphism" : ""}`}>
       <Button
         variant="link"
         className="mb-4 flex w-full items-start justify-start text-muted-foreground"

@@ -6,8 +6,9 @@ import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { CtaButton } from "@/components/landing/cta-button";
 import { SocialProofLogo } from "@/components/landing/social-proof-logo";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export function Hero() {
   const [inputText, setInputText] = useState("");
@@ -31,7 +32,7 @@ export function Hero() {
           transition={{ delay: 0.8, duration: 0.4 }}
           className="flex cursor-pointer items-center gap-1 rounded-full bg-secondary/10 px-4 py-1 font-medium text-secondary hover:bg-secondary/20"
         >
-          <span className="text-sm">Introducing SocialLens</span>
+          <span className="text-sm">Introducing Diagramify</span>
         </motion.div>
         <motion.h1
           animate={{ y: 0, opacity: 1 }}
@@ -56,19 +57,16 @@ export function Hero() {
           transition={{ delay: 0.4, duration: 0.4 }}
           className="flex w-full max-w-xl flex-col gap-4 sm:flex-row"
         >
-          <input
+          <Input
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             placeholder="Describe your diagram..."
-            className="flex-1 rounded-lg border bg-background px-4 py-2 text-foreground"
+            className="h-11 flex-1 bg-background"
           />
-          <button
-            type="submit"
-            className="rounded-lg bg-primary px-6 py-2 font-medium text-primary-foreground hover:bg-primary/90"
-          >
+          <Button type="submit" className="h-11">
             Generate
-          </button>
+          </Button>
         </motion.form>
         <motion.div
           animate={{ y: 0.4, opacity: 1 }}

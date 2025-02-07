@@ -234,10 +234,10 @@ export function DiagramDownloadButton({
 
   return simpleMode ? (
     <Button
-      variant="minimal"
+      variant="icon"
       size="icon"
       onClick={handleDownloadPNG}
-      className="h-8 w-8 rounded-sm"
+      className="h-8 w-8"
     >
       <Download className="h-4 w-4" />
     </Button>
