@@ -53,6 +53,7 @@ export function DiagramGenerator() {
   const { toast } = useToast();
   const { data: session } = useSession();
   const anonymousUser = getAnonymousUser();
+  const [anonymousCredits, setAnonymousCredits] = useState(0);
 
   // Fetch user credits if logged in
   const { data: userCredits } = api.ai.getUserCredits.useQuery(undefined, {
@@ -71,6 +72,10 @@ export function DiagramGenerator() {
   useEffect(() => {
     // Initialize Mermaid when component mounts
     void initializeMermaid(currentTheme);
+  }, []);
+
+  useEffect(() => {
+    setAnonymousCredits(getAnonymousUser().credits);
   }, []);
 
   // Initialize mutation
@@ -112,15 +117,8 @@ export function DiagramGenerator() {
         });
       } catch (err) {
         console.error("Mermaid render error:", err);
-        const errorMessage =
-          err instanceof Error ? err.message : "Unknown error";
+        const errorMessage = err instanceof Error ? err.message : "Failed to render diagram";
         setError(errorMessage);
-        generateDiagram.mutate({
-          text: input,
-          isComplex,
-          previousError: errorMessage,
-          anonymousId: !session?.user ? anonymousUser.id : undefined,
-        });
       }
     },
     onError: (err) => {
@@ -269,7 +267,7 @@ export function DiagramGenerator() {
                   {session?.user ? (
                     `Credits: ${userCredits?.credits ?? 0} / 10`
                   ) : (
-                    `Credits: ${anonymousUser.credits} / 5`
+                    `Credits: ${anonymousCredits} / 5`
                   )}
                   {isComplex && (
                     <span className="ml-1">(Uses 2 credits)</span>

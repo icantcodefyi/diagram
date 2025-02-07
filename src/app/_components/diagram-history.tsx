@@ -6,7 +6,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { DiagramPreviewModal } from "./diagram-preview-modal";
-import { type RouterOutputs } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
@@ -17,8 +16,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { type Diagram } from "@prisma/client";
 
-type DiagramType = RouterOutputs["diagram"]["getUserDiagrams"][number];
+type DiagramType = Diagram;
 
 export function DiagramHistory() {
   const { data: session } = useSession();
@@ -27,10 +27,8 @@ export function DiagramHistory() {
     {
       enabled: !!session?.user,
     },
-  );
-  const [selectedDiagram, setSelectedDiagram] = useState<DiagramType | null>(
-    null,
-  );
+  ) as { data: DiagramType[] | undefined; isLoading: boolean };
+  const [selectedDiagram, setSelectedDiagram] = useState<DiagramType | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
@@ -43,10 +41,10 @@ export function DiagramHistory() {
   };
 
   const HistoryContent = () => (
-    <div className="glassmorphism p-4">
+    <div className="glassmorphism p-4 h-screen overflow-y-auto">
       <Button
         variant="link"
-        className="mb-4 flex w-full items-start justify-start"
+        className="mb-4 flex w-full items-start justify-start text-muted-foreground"
         onClick={() => {
           if (!session?.user) {
             handleHistoryClick();
@@ -59,14 +57,14 @@ export function DiagramHistory() {
       </Button>
 
       {(!isCollapsed || isMobile) && (
-        <ScrollArea className="h-auto max-h-[60vh]">
+        <ScrollArea className="h-[calc(100vh-100px)]">
           <div className="space-y-2">
             {isLoading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <Button
                   key={i}
                   variant="link"
-                  className="h-auto w-full justify-start py-2 text-left"
+                  className="h-auto w-full justify-start py-2 text-left text-muted-foreground"
                   disabled
                 >
                   <div className="flex w-full flex-col">
@@ -80,7 +78,7 @@ export function DiagramHistory() {
                 <Button
                   key={i}
                   variant="link"
-                  className="h-auto w-full justify-start py-2 text-left"
+                  className="h-auto w-full justify-start py-2 text-left text-muted-foreground"
                   onClick={handleHistoryClick}
                 >
                   <div className="flex flex-col">
@@ -91,16 +89,16 @@ export function DiagramHistory() {
                   </div>
                 </Button>
               ))
-            ) : diagrams?.length === 0 ? (
+            ) : diagrams && diagrams.length === 0 ? (
               <p className="text-center text-sm text-muted-foreground">
                 No diagrams yet
               </p>
             ) : (
-              diagrams?.map((diagram) => (
+              diagrams?.map((diagram: DiagramType) => (
                 <Button
                   key={diagram.id}
                   variant="link"
-                  className="h-auto w-full justify-start py-2 text-left"
+                  className="h-auto w-full justify-start py-2 text-left text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => setSelectedDiagram(diagram)}
                 >
                   <div className="flex flex-col">
@@ -108,7 +106,7 @@ export function DiagramHistory() {
                       {diagram.name ?? "Untitled Diagram"}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(diagram.createdAt), {
+                      {formatDistanceToNow(diagram.createdAt, {
                         addSuffix: true,
                       })}{" "}
                       • {diagram.type}
