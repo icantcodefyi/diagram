@@ -8,10 +8,12 @@ export type MermaidTheme =
   | "base";
 
 const defaultConfig = {
-  startOnLoad: true,
-  securityLevel: "loose",
-  fontFamily: "arial",
+  startOnLoad: false,
+  securityLevel: "strict",
+  theme: "default",
   logLevel: "error",
+  mermaid: "11.4.1",
+  fontFamily: "arial",
   flowchart: {
     curve: "basis",
     padding: 20,
@@ -66,42 +68,38 @@ export const renderMermaidDiagram = async (diagram: string, elementId: string) =
   if (!element) return;
 
   try {
-    // Ensure Mermaid is initialized with current theme
-    await initializeMermaid(currentTheme);
+    // Initialize with current theme
+    mermaid.initialize({
+      ...defaultConfig,
+      theme: currentTheme
+    });
     
-    // Check cache first - include theme in cache key
-    const cacheKey = `${diagram}-${elementId}-${currentTheme}`;
-    const cachedSvg = svgCache.get(cacheKey);
-    
-    if (cachedSvg) {
-      element.innerHTML = cachedSvg;
-      return;
+    // First try parsing
+    try {
+      await mermaid.parse(diagram);
+    } catch (parseError) {
+      console.error('Mermaid parse error:', parseError);
+      throw parseError;
     }
     
-    // Generate a unique ID for this render using elementId to ensure uniqueness
+    // Generate unique ID
     const uniqueId = `mermaid-${elementId.replace(/[^a-zA-Z0-9]/g, '')}-${Math.random().toString(36).substr(2, 9)}`;
     
     // Clear previous content
     element.innerHTML = '';
     
+    // Render if parsing succeeded
     try {
-      // Re-initialize mermaid with current theme before rendering
-      mermaid.initialize({
-        ...defaultConfig,
-        theme: currentTheme
-      });
-      
-      // If parsing succeeds, render the diagram
       const { svg } = await mermaid.render(uniqueId, diagram);
       
       if (svg) {
         element.innerHTML = svg;
-        // Cache the result with theme
-        svgCache.set(cacheKey, svg);
+      } else {
+        throw new Error('Failed to generate SVG');
       }
-    } catch (parseError) {
-      console.error('Mermaid parse error:', parseError);
-      throw parseError;
+    } catch (renderError) {
+      console.error('Mermaid render error:', renderError);
+      throw renderError;
     }
   } catch (error) {
     console.error('Failed to render diagram:', error);

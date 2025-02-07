@@ -129,7 +129,7 @@ Respond in this exact JSON format:
   "reasoning": "brief explanation why this type is best suited for this visualization"
 }`;
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const request = async () => {
       try {
         const result = await makeAPIRequestWithRetry(async () => {
@@ -325,7 +325,7 @@ Example titles:
 - Order Processing System
 - Team Hierarchy Structure`;
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const request = async () => {
       try {
         const result = await makeAPIRequestWithRetry(async () => {
