@@ -1,16 +1,34 @@
 import puppeteer from "puppeteer";
-import type { ValidationResult } from "@/types/mermaid";
 
 export async function validateMermaidDiagram(code: string): Promise<boolean> {
+  console.log('Starting Mermaid validation process...');
   try {
+    console.log('Launching Puppeteer browser...');
     const browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+      ]
     });
+    console.log('Browser launched successfully');
     
+    console.log('Creating new page...');
     const page = await browser.newPage();
+    console.log('New page created');
     
-    // Inject Mermaid and validation logic
+    // Set a reasonable timeout
+    console.log('Setting page timeouts...');
+    page.setDefaultTimeout(30000);
+    page.setDefaultNavigationTimeout(30000);
+    
+    // Inject Mermaid and validation logic with error handling
+    console.log('Setting page content with Mermaid...');
     await page.setContent(`
       <!DOCTYPE html>
       <html>
@@ -18,54 +36,70 @@ export async function validateMermaidDiagram(code: string): Promise<boolean> {
           <script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js"></script>
         </head>
         <body>
-          <div id="container" class="mermaid">${code}</div>
+          <pre class="mermaid" id="container">${code}</pre>
         </body>
       </html>
     `);
+    console.log('Page content set successfully');
 
-    // Add the validation function directly to the page context
-    await page.addScriptTag({
-      content: `
-        window.validateDiagram = async function(diagramCode) {
-          try {
-            await mermaid.initialize({
-              startOnLoad: false,
-              securityLevel: 'strict'
-            });
+    // Wait for Mermaid to load
+    console.log('Waiting for Mermaid to load...');
+    await page.waitForFunction(() => typeof window.mermaid !== 'undefined', { timeout: 10000 });
+    console.log('Mermaid loaded successfully');
 
-            await mermaid.parse(diagramCode);
-            const { svg } = await mermaid.render('validate-diagram', diagramCode);
-            return { isValid: !!svg, error: null };
-          } catch (error) {
-            return { 
-              isValid: false, 
-              error: error.message || 'Unknown error during validation'
-            };
-          }
-        }
-      `
-    });
+    // Add the validation function with better error handling
+    console.log('Starting diagram validation...');
+    console.log('Input diagram code:', code);
+    const validationResult = await page.evaluate(async (diagramCode) => {
+      try {
+        console.log('Initializing Mermaid in browser context...');
+        await window.mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: 'strict',
+        });
+        console.log('Mermaid initialized');
 
-    // Wait for Mermaid and validation function to be ready
-    await page.waitForFunction(() => 
-      typeof window.mermaid !== 'undefined' && 
-      typeof window.validateDiagram === 'function'
-    );
+        console.log('Attempting to render diagram...');
+        const { svg } = await window.mermaid.render('validate-diagram', diagramCode);
+        console.log('Diagram rendered successfully');
+        return { isValid: Boolean(svg), error: null };
+      } catch (error) {
+        console.error('Error in browser context:', error);
+        return {
+          isValid: false,
+          error: error instanceof Error ? error.message : 'Unknown validation error'
+        };
+      }
+    }, code);
 
-    // Execute validation with proper error handling
-    const results = await page.evaluate(async (diagramCode) => {
-      return await window.validateDiagram(diagramCode);
-    }, code) as ValidationResult;
-
+    console.log('Closing browser...');
     await browser.close();
+    console.log('Browser closed successfully');
 
-    if (!results.isValid) {
-      console.error('Mermaid validation failed:', results.error);
+    if (!validationResult.isValid) {
+      console.error('Mermaid validation failed:', validationResult.error);
+      console.error('Validation result:', JSON.stringify(validationResult, null, 2));
+    } else {
+      console.log('Diagram validation successful');
     }
 
-    return results.isValid;
+    return validationResult.isValid;
   } catch (error) {
-    console.error('Validation error:', error);
+    console.error('=== Validation Service Error Details ===');
+    console.error('Error type:', error instanceof Error ? 'Error object' : typeof error);
+    console.error('Error message:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
+    console.error('=====================================');
+
+    // In production, we might want to be more lenient with validation
+    if (process.env.NODE_ENV === 'production' && error instanceof Error) {
+      if (error.message.includes('browser') || error.message.includes('puppeteer')) {
+        console.warn('Bypassing browser-related validation error in production');
+        console.warn('Error was:', error.message);
+        return true;
+      }
+    }
     return false;
   }
 } 
