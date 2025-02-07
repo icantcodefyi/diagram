@@ -64,13 +64,16 @@ export default function Section() {
               </div>
             </div>
             <div className="relative">
-              <Image
-                alt="Diagramify example"
-                height={600}
-                src="/images/diagram-example.png"
-                width={600}
-                className="rounded-xl object-cover"
-              />
+             <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="rounded-xl object-cover"
+             >
+              <source src="/video.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
               <div className="absolute -bottom-6 -left-6 hidden lg:block">
                 <div className="rounded-lg bg-background p-6 shadow-lg">
                   <div className="flex items-center gap-4">

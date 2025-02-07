@@ -11,19 +11,18 @@ export function FeaturesSection2() {
       <div className="flex flex-1 flex-col items-start gap-10">
         <div className="flex flex-col gap-3">
           <span className="font-bold text-primary text-left italic font-heading">
-            Advanced Hashtag Analysis
+            Quick Edit Functionality
           </span>
           <h2 className="font-heading text-3xl tracking-tight sm:text-4xl text-balance text-left font-bold">
-            Maximize Reach with Optimal Hashtags
+            Seamless Editing & Export
           </h2>
         </div>
         <p className="text-lg text-muted-foreground text-balance max-w-lg text-left">
-          Gain valuable insights to make informed decisions and optimize your strategy for continued
-          success.
+          Effortlessly adjust, refine, and export your diagrams in multiple formats for easy sharing and collaboration.
         </p>
         <div className="flex grid-cols-2 grid gap-4">
-          <StatItem label="Increase in Impressions" value="18%" />
-          <StatItem label="Followers count growth" value="2.5X" />
+          <StatItem label="Time Saved vs Manual Creation" value="90%" />
+          <StatItem label="Export Options" value="3+" />
         </div>
       </div>
     </section>

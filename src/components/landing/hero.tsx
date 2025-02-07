@@ -40,7 +40,7 @@ export function Hero() {
           transition={{ delay: 0, duration: 0.4 }}
           className="text-balance text-center font-heading text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl"
         >
-          Generate diagrams from your text with AI
+          Transform Ideas into Professional Diagrams with AI
         </motion.h1>
         <motion.p
           animate={{ y: 0, opacity: 1 }}
@@ -48,7 +48,7 @@ export function Hero() {
           transition={{ delay: 0.2, duration: 0.4 }}
           className="max-w-lg text-center text-lg text-muted-foreground sm:text-xl"
         >
-          Transform your ideas into beautiful diagrams instantly using AI
+          Say goodbye to manual diagram creation. Describe your concept and let our AI craft professional-grade visuals instantly.
         </motion.p>
         <motion.form
           onSubmit={handleSubmit}
@@ -87,7 +87,7 @@ export function Hero() {
       </div>
       <div className="container mt-14 max-w-5xl">
         <h2 className="mb-12 text-center text-sm font-semibold leading-8 text-muted-foreground sm:text-lg">
-          Trusted by the best companies in the world
+          Trusted by developers, teams, and businesses worldwide
         </h2>
         <div className="grid w-full grid-cols-4 gap-6 sm:grid-cols-6 lg:grid-cols-5">
           <SocialProofLogo image="/landing/microsoft.webp" />

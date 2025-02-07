@@ -9,26 +9,25 @@ export function FeaturesSection() {
       <div className="flex flex-1 flex-col items-start gap-10">
         <div className="flex flex-col gap-3">
           <span className="font-bold text-primary text-left italic font-heading">
-            Posting Time Analysis
+            AI-Powered Generation
           </span>
           <h2 className="font-heading text-3xl tracking-tight sm:text-4xl text-balance text-left font-bold">
-            Discover the best time to post you content
+            Effortless Diagram Creation
           </h2>
         </div>
         <p className="text-lg text-muted-foreground text-balance max-w-lg text-left hidden">
-          Gain valuable insights to make informed decisions and optimize your strategy for continued
-          success.
+          Transform complex ideas into clear, professional diagrams with just a text description.
         </p>
         <div className="flex flex-col gap-8">
           <FeatureItem
             icon={Search}
-            title="Smart Scheduling"
-            description="Auto-suggests ideal posting times for achieving maximum engagement."
+            title="Natural Language Input"
+            description="Simply describe your diagram in plain text, and our AI understands and creates it instantly."
           />
           <FeatureItem
             icon={BarChart2}
-            title="Real Time Analytics"
-            description="Dynamically adjusts posting times for reaching optimal visibility"
+            title="Error Resolution"
+            description="Our AI automatically detects and fixes issues, ensuring your diagrams are accurate and functional."
           />
         </div>
       </div>

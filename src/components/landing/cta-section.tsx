@@ -8,10 +8,10 @@ export function CtaSection() {
     <section className="container">
       <div className="flex flex-col items-center gap-6 px-6 relative flex-1 rounded-tl-[2.5rem] rounded-bl-[5rem] rounded-tr-[2.5rem] bg-gradient-to-br to-primary overflow-hidden pt-24 from-secondary">
         <h2 className="font-heading text-3xl tracking-tight sm:text-4xl text-balance text-primary-foreground text-left font-bold md:text-5xl">
-          Get started for free
+          Start Creating Beautiful Diagrams Today
         </h2>
         <p className="max-w-xl text-lg text-primary-foreground/80 text-center">
-          Elevate your social media strategy toda.
+          Join thousands of professionals who trust Diagramify to transform their ideas into stunning visuals.
         </p>
         <Button
           size="lg"
@@ -19,7 +19,7 @@ export function CtaSection() {
           variant="outline"
           className="cursor-pointer border-border bg-background hover:bg-bacground/90"
         >
-          <Link href="#">Get Started</Link>
+          <Link href="#">Try Diagramify Free</Link>
         </Button>
         <Image
           alt="SaaS Dashboard"
