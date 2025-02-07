@@ -160,7 +160,7 @@ export function DiagramHistory() {
           <Button
             variant="default"
             className="w-full"
-            onClick={() => signIn()}
+            onClick={() => signIn("google", { callbackUrl: "/" })}
           >
             Sign in
           </Button>
