@@ -204,7 +204,7 @@ async function handleSubscriptionExpired(data: LemonSqueezySubscriptionData) {
 export async function POST(req: Request) {
   try {
     const headersList = headers();
-    const signature = headersList.get("x-signature");
+    const signature = (await headersList).get("x-signature");
     const rawBody = await req.text();
     
     console.log("Received webhook request", {
