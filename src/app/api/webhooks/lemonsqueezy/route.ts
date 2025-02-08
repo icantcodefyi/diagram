@@ -1,5 +1,4 @@
 import { db } from "@/server/db";
-import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { env } from "@/env";
 import crypto from "crypto";
@@ -16,7 +15,7 @@ interface LemonSqueezySubscriptionData {
     order_item_id: number;
     product_id: number;
     variant_id: number;
-    customer_email: string;
+    user_email: string;
     status: string;
     card_brand: string;
     card_last_four: string;
@@ -64,22 +63,27 @@ function verifyWebhookSignature(
 
 async function handleSubscriptionCreated(data: LemonSqueezySubscriptionData) {
   console.log("Processing subscription_created event:", {
-    email: data.attributes.customer_email,
+    email: data.attributes.user_email,
     subscription_id: data.id,
     data: JSON.stringify(data, null, 2),
   });
 
-  const { customer_email } = data.attributes;
+  const { user_email } = data.attributes;
   const subscription_id = data.id;
   const ends_at = data.attributes.ends_at ?? data.attributes.renews_at;
 
+  if (!user_email) {
+    console.error("No user email found in webhook payload");
+    return;
+  }
+
   const user = await db.user.findUnique({
-    where: { email: customer_email },
+    where: { email: user_email },
     include: { credits: true },
   });
 
   if (!user) {
-    console.error("User not found:", customer_email);
+    console.error("User not found:", user_email);
     return;
   }
 
@@ -191,8 +195,8 @@ async function handleSubscriptionCancelled(data: LemonSqueezySubscriptionData) {
 
 export async function POST(req: Request) {
   try {
-    const headersList = headers();
-    const signature = (await headersList).get("x-signature");
+    // Get the signature from headers
+    const signature = req.headers.get("x-signature");
     const rawBody = await req.text();
     
     console.log("Received webhook request", {
