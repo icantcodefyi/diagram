@@ -26,7 +26,7 @@ export function Pricing() {
         />
         <PricingCard
           name="Pro"
-          price={19}
+          price={9}
           feature1="Unlimited diagrams"
           feature2="All diagram types"
           feature3="SVG & PNG export"
