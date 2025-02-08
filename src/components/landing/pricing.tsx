@@ -35,6 +35,7 @@ export function Pricing() {
           description="For professionals and growing teams."
           isMostPopular
           className="border-2 border-primary"
+          variantId={687799}
         />
       </div>
     </section>

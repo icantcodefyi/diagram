@@ -65,6 +65,7 @@ model User {
     posts         Post[]
     diagrams      Diagram[]
     credits       UserCredits?
+    subscription  Subscription?
 }
 
 model VerificationToken {
@@ -97,6 +98,23 @@ model UserCredits {
     userId          String   @unique
     credits         Int      @default(20)
     lastCreditReset DateTime @default(now())
+    monthlyCredits  Int      @default(0)  // Additional monthly credits for pro users
+    lastMonthlyReset DateTime? // When the monthly credits were last reset
     
     @@index([userId])
+}
+
+model Subscription {
+    id                String   @id @default(cuid())
+    user              User     @relation(fields: [userId], references: [id])
+    userId            String   @unique
+    status            String   // active, cancelled, expired
+    lemonSqueezyId    String   @unique  // LemonSqueezy subscription ID
+    currentPeriodEnd  DateTime
+    cancelAtPeriodEnd Boolean  @default(false)
+    createdAt         DateTime @default(now())
+    updatedAt         DateTime @updatedAt
+
+    @@index([userId])
+    @@index([lemonSqueezyId])
 }
