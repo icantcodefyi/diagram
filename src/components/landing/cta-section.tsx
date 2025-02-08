@@ -17,9 +17,9 @@ export function CtaSection() {
           size="lg"
           asChild
           variant="outline"
-          className="cursor-pointer border-border bg-background hover:bg-bacground/90"
+          className="cursor-pointer border-border bg-background hover:bg-bacground/90 h-14 text-base font-semibold font-heading px-10"
         >
-          <Link href="#">Try Diagramify Free</Link>
+          <Link href="/generate">Try Diagramify Free</Link>
         </Button>
         <Image
           alt="SaaS Dashboard"

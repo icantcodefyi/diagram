@@ -48,6 +48,11 @@ export function PricingCard({
       return;
     }
 
+    if (price === 0) {
+      window.location.href = "/generate";
+      return;
+    }
+
     if (!variantId) {
       toast.error("This plan is not available for purchase");
       return;

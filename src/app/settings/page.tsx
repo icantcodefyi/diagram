@@ -106,7 +106,7 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
       <div className="mx-auto max-w-3xl p-4">
         <Button
-          variant="ghost"
+          variant="link"
           onClick={() => router.push("/generate")}
           className="mb-8 gap-2"
         >
