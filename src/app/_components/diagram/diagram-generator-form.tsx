@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/texturebutton";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader, RefreshCw } from "lucide-react";
+import { Loader, RefreshCw, Twitter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   EXAMPLE_SUGGESTIONS,
@@ -17,6 +17,14 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { getAnonymousUser, updateAnonymousCredits } from "@/lib/anonymous-user";
 import { renderMermaidDiagram } from "@/lib/mermaid-config";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface DiagramGeneratorFormProps {
   onDiagramGenerated: (diagram: string, type: DiagramType) => void;
@@ -32,6 +40,7 @@ export function DiagramGeneratorForm({
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isComplex, setIsComplex] = useState(false);
+  const [showCreditDialog, setShowCreditDialog] = useState(false);
   const { toast } = useToast();
   const { data: session } = useSession();
   const anonymousUser = getAnonymousUser();
@@ -178,14 +187,7 @@ export function DiagramGeneratorForm({
     if (session?.user && userCredits?.credits !== undefined) {
       const requiredCredits = isComplex ? 2 : 1;
       if (userCredits.credits < requiredCredits) {
-        toast({
-          title: "Insufficient Credits",
-          description:
-            "You don't have enough credits for this operation. Credits will reset tomorrow!",
-          variant: "destructive",
-          duration: 5000,
-          className: "rounded",
-        });
+        setShowCreditDialog(true);
         return;
       }
     } else {
@@ -215,78 +217,101 @@ export function DiagramGeneratorForm({
   };
 
   return (
-    <Card className="border-none shadow-none">
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={`Example: ${EXAMPLE_SUGGESTIONS.flowchart}`}
-              className="min-h-[128px] resize-y rounded-[0.75rem]"
-              disabled={isLoading}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  if (!isLoading && input.trim()) {
-                    void handleSubmit(e);
+    <>
+      <Card className="border-none shadow-none">
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={`Example: ${EXAMPLE_SUGGESTIONS.flowchart}`}
+                className="min-h-[128px] resize-y rounded-[0.75rem]"
+                disabled={isLoading}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!isLoading && input.trim()) {
+                      void handleSubmit(e);
+                    }
                   }
-                }
-              }}
-            />
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="complex-mode"
-                  checked={isComplex}
-                  onCheckedChange={setIsComplex}
-                  disabled={isLoading}
-                />
-                <Label
-                  htmlFor="complex-mode"
-                  className="cursor-pointer select-none text-sm text-muted-foreground"
-                >
-                  Generate detailed and sophisticated diagram
-                </Label>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {session?.user
-                  ? `Credits: ${userCredits?.credits ?? 0} / 10`
-                  : `Credits: ${anonymousCredits} / 5`}
-                {isComplex && <span className="ml-1">(Uses 2 credits)</span>}
+                }}
+              />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="complex-mode"
+                    checked={isComplex}
+                    onCheckedChange={setIsComplex}
+                    disabled={isLoading}
+                  />
+                  <Label
+                    htmlFor="complex-mode"
+                    className="cursor-pointer select-none text-sm text-muted-foreground"
+                  >
+                    Generate detailed and sophisticated diagram
+                  </Label>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {session?.user
+                    ? `Credits: ${userCredits?.credits ?? 0} / 20`
+                    : `Credits: ${anonymousCredits} / 5`}
+                  {isComplex && <span className="ml-1">(Uses 2 credits)</span>}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex justify-between gap-2">
+            <div className="flex justify-between gap-2">
+              <Button
+                type="button"
+                variant="minimal"
+                onClick={handleReset}
+                disabled={isLoading || !input}
+                className="min-w-[140px]"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Reset
+              </Button>
+              <Button
+                type="submit"
+                variant="accent"
+                disabled={isLoading || !input.trim()}
+                className="min-w-[140px]"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                    Generating
+                  </>
+                ) : (
+                  "Generate Diagram"
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Dialog open={showCreditDialog} onOpenChange={setShowCreditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Need More Credits?</DialogTitle>
+            <DialogDescription className="pt-2">
+              You&apos;ve used all your credits for today. Since we&apos;re still in the experimental stage, 
+              you can request more credits by DMing us on Twitter.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-start">
             <Button
-              type="button"
-              variant="minimal"
-              onClick={handleReset}
-              disabled={isLoading || !input}
-              className="min-w-[140px]"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Reset
-            </Button>
-            <Button
-              type="submit"
               variant="accent"
-              disabled={isLoading || !input.trim()}
-              className="min-w-[140px]"
+              onClick={() => window.open("https://twitter.com/messages/compose?recipient_id=icantcodefyi", "_blank")}
             >
-              {isLoading ? (
-                <>
-                  <Loader className="mr-2 h-4 w-4 animate-spin" />
-                  Generating
-                </>
-              ) : (
-                "Generate Diagram"
-              )}
+              <Twitter className="mr-2 h-4 w-4" />
+              DM on Twitter
             </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 } 
