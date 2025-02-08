@@ -45,7 +45,7 @@ export function Footer() {
         <Link href="/features" className="text-sm text-muted-foreground hover:text-foreground">
           Features
         </Link>
-        <Link href="/integrations" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/#" className="text-sm text-muted-foreground hover:text-foreground">
           Integrations
         </Link>
         <Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground">
