@@ -26,6 +26,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
+import { getAnonymousUser, updateAnonymousCredits } from "@/lib/anonymous-user";
 
 interface DiagramGeneratorFormProps {
   onDiagramGenerated: (diagram: string, type: DiagramType) => void;
@@ -42,6 +43,7 @@ export function DiagramGeneratorForm({
   const [isLoading, setIsLoading] = useState(false);
   const [isComplex, setIsComplex] = useState(false);
   const [showCreditDialog, setShowCreditDialog] = useState(false);
+  const [anonymousCredits, setAnonymousCredits] = useState<number | null>(null);
   const { toast } = useToast();
   const { data: session } = useSession();
   const hasInitialized = useRef(false);
@@ -51,6 +53,21 @@ export function DiagramGeneratorForm({
     enabled: !!session?.user,
     refetchOnWindowFocus: true,
   });
+
+  // Fetch anonymous user credits if not logged in
+  useEffect(() => {
+    if (!session?.user) {
+      const fetchAnonymousCredits = async () => {
+        try {
+          const anonUser = await getAnonymousUser();
+          setAnonymousCredits(anonUser.credits);
+        } catch (error) {
+          console.error("Error fetching anonymous credits:", error);
+        }
+      };
+      void fetchAnonymousCredits();
+    }
+  }, [session?.user]);
 
   const generateDiagram = api.ai.generateDiagram.useMutation({
     onMutate: () => {
@@ -74,6 +91,13 @@ export function DiagramGeneratorForm({
         await renderMermaidDiagram(data.diagram, "#mermaid-diagram");
 
         onDiagramGenerated(data.diagram, data.type);
+
+        // Update anonymous credits if not logged in
+        if (!session?.user && anonymousCredits !== null) {
+          const newCredits = anonymousCredits - (isComplex ? 2 : 1);
+          await updateAnonymousCredits(newCredits);
+          setAnonymousCredits(newCredits);
+        }
 
         toast({
           title: "Success",
@@ -99,15 +123,39 @@ export function DiagramGeneratorForm({
       if (err instanceof Error && err.message.includes("Insufficient credits")) {
         toast({
           title: "Out of Credits",
-          description:
-            "You've used all your credits for today. Credits will reset tomorrow!",
+          description: session?.user 
+            ? "You've used all your credits for today. Credits will reset tomorrow!"
+            : "You've used all your anonymous credits. Sign up to get more credits!",
           variant: "destructive",
           duration: 5000,
           className: "rounded",
+          action: !session?.user ? (
+            <Button variant="secondary" size="sm" onClick={onShowLogin}>
+              Sign Up
+            </Button>
+          ) : undefined,
         });
       }
     },
   });
+
+  // Add state for anonymous ID
+  const [anonymousId, setAnonymousId] = useState<string | null>(null);
+
+  // Fetch anonymous ID if not logged in
+  useEffect(() => {
+    if (!session?.user) {
+      const fetchAnonymousId = async () => {
+        try {
+          const anonUser = await getAnonymousUser();
+          setAnonymousId(anonUser.id);
+        } catch (error) {
+          console.error("Error fetching anonymous ID:", error);
+        }
+      };
+      void fetchAnonymousId();
+    }
+  }, [session?.user]);
 
   // Handle URL query parameters
   useEffect(() => {
@@ -118,29 +166,38 @@ export function DiagramGeneratorForm({
       hasInitialized.current = true;
       setInput(textQuery);
 
-      if (!session?.user) {
-        onShowLogin();
-        return;
-      }
-
       const generateFromQuery = async () => {
-        if (userCredits?.credits !== undefined) {
+        const credits = session?.user ? userCredits?.credits : anonymousCredits;
+        if (credits !== undefined && credits !== null) {
           const requiredCredits = isComplex ? 2 : 1;
-          if (userCredits.credits < requiredCredits) {
+          if (credits < requiredCredits) {
             toast({
               title: "Insufficient Credits",
-              description: "You don't have enough credits for this operation.",
+              description: session?.user 
+                ? "You don't have enough credits for this operation."
+                : "Not enough anonymous credits. Sign up to get more credits!",
               variant: "destructive",
               duration: 5000,
               className: "rounded",
+              action: !session?.user ? (
+                <Button variant="secondary" size="sm" onClick={onShowLogin}>
+                  Sign Up
+                </Button>
+              ) : undefined,
             });
             return;
           }
         }
 
+        if (!session?.user && !anonymousId) {
+          console.error("No anonymous ID available");
+          return;
+        }
+
         generateDiagram.mutate({
           text: textQuery,
           isComplex,
+          anonymousId: !session?.user ? anonymousId! : undefined,
         });
 
         // Clear the URL query parameter after generation starts
@@ -149,20 +206,16 @@ export function DiagramGeneratorForm({
 
       void generateFromQuery();
     }
-  }, [session?.user, userCredits?.credits, isComplex, generateDiagram, toast, onShowLogin]);
+  }, [session?.user, userCredits?.credits, anonymousCredits, anonymousId, isComplex, generateDiagram, toast, onShowLogin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     onError(null);
 
-    if (!session?.user) {
-      onShowLogin();
-      return;
-    }
-
-    if (userCredits?.credits !== undefined) {
+    const credits = session?.user ? userCredits?.credits : anonymousCredits;
+    if (credits !== undefined && credits !== null) {
       const requiredCredits = isComplex ? 2 : 1;
-      if (userCredits.credits < requiredCredits) {
+      if (credits < requiredCredits) {
         setShowCreditDialog(true);
         return;
       }
@@ -173,9 +226,15 @@ export function DiagramGeneratorForm({
       return;
     }
 
+    if (!session?.user && !anonymousId) {
+      console.error("No anonymous ID available");
+      return;
+    }
+
     generateDiagram.mutate({
       text: input,
       isComplex,
+      anonymousId: !session?.user ? anonymousId! : undefined,
     });
   };
 
@@ -183,6 +242,8 @@ export function DiagramGeneratorForm({
     setInput("");
     onError(null);
   };
+
+  const credits = session?.user ? userCredits?.credits : anonymousCredits;
 
   return (
     <>
@@ -220,17 +281,16 @@ export function DiagramGeneratorForm({
                     Generate detailed and sophisticated diagram
                   </Label>
                 </div>
-                {session?.user && (
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      <AnimatedCounter 
-                        value={userCredits?.credits}
-                        className="tabular-nums"
-                      />
-                    </Badge>
-                    {isComplex && <span className="text-xs text-muted-foreground">(Uses 2 credits)</span>}
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    <AnimatedCounter 
+                      value={credits}
+                      className="tabular-nums"
+                    />
+                    {!session?.user && " (Anonymous)"}
+                  </Badge>
+                  {isComplex && <span className="text-xs text-muted-foreground">(Uses 2 credits)</span>}
+                </div>
               </div>
             </div>
 
@@ -257,7 +317,7 @@ export function DiagramGeneratorForm({
                     Generating
                   </>
                 ) : (
-                  session?.user ? "Generate Diagram" : "Login to Generate"
+                  "Generate Diagram"
                 )}
               </Button>
             </div>
@@ -270,18 +330,33 @@ export function DiagramGeneratorForm({
           <DialogHeader>
             <DialogTitle>Need More Credits?</DialogTitle>
             <DialogDescription className="pt-2">
-              You&apos;ve used all your credits for today. Since we&apos;re still in the experimental stage, 
-              you can request more credits by DMing us on Twitter.
+              {session?.user ? (
+                "You've used all your credits for today. Since we're still in the experimental stage, you can request more credits by DMing us on Twitter."
+              ) : (
+                "You've used all your anonymous credits. Sign up to get more credits and unlock additional features!"
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="sm:justify-start">
-            <Button
-              variant="accent"
-              onClick={() => window.open("https://twitter.com/messages/compose?recipient_id=icantcodefyi", "_blank")}
-            >
-              <Twitter className="mr-2 h-4 w-4" />
-              DM on Twitter
-            </Button>
+            {session?.user ? (
+              <Button
+                variant="accent"
+                onClick={() => window.open("https://twitter.com/messages/compose?recipient_id=icantcodefyi", "_blank")}
+              >
+                <Twitter className="mr-2 h-4 w-4" />
+                DM on Twitter
+              </Button>
+            ) : (
+              <Button
+                variant="accent"
+                onClick={() => {
+                  setShowCreditDialog(false);
+                  onShowLogin();
+                }}
+              >
+                Sign Up
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
