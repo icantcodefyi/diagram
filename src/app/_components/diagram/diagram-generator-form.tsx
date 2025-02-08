@@ -16,7 +16,6 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { getAnonymousUser, updateAnonymousCredits } from "@/lib/anonymous-user";
 import { renderMermaidDiagram } from "@/lib/mermaid-config";
 import {
   Dialog,
@@ -45,8 +44,6 @@ export function DiagramGeneratorForm({
   const [showCreditDialog, setShowCreditDialog] = useState(false);
   const { toast } = useToast();
   const { data: session } = useSession();
-  const anonymousUser = getAnonymousUser();
-  const [anonymousCredits, setAnonymousCredits] = useState(0);
   const hasInitialized = useRef(false);
 
   // Fetch user credits if logged in
@@ -54,10 +51,6 @@ export function DiagramGeneratorForm({
     enabled: !!session?.user,
     refetchOnWindowFocus: true,
   });
-
-  useEffect(() => {
-    setAnonymousCredits(getAnonymousUser().credits);
-  }, []);
 
   const generateDiagram = api.ai.generateDiagram.useMutation({
     onMutate: () => {
@@ -79,12 +72,6 @@ export function DiagramGeneratorForm({
 
         // Render the new diagram
         await renderMermaidDiagram(data.diagram, "#mermaid-diagram");
-
-        // Update anonymous user credits if not logged in
-        if (!session?.user) {
-          const requiredCredits = isComplex ? 2 : 1;
-          updateAnonymousCredits(anonymousUser.credits - requiredCredits);
-        }
 
         onDiagramGenerated(data.diagram, data.type);
 
@@ -109,20 +96,15 @@ export function DiagramGeneratorForm({
           : "Failed to generate diagram. Please try again with a different description.";
       onError(errorMessage);
 
-      // Handle credit-related errors
-      if (err instanceof Error) {
-        if (err.message.includes("Please login to generate more diagrams")) {
-          onShowLogin();
-        } else if (err.message.includes("Insufficient credits")) {
-          toast({
-            title: "Out of Credits",
-            description:
-              "You've used all your credits for today. Credits will reset tomorrow!",
-            variant: "destructive",
-            duration: 5000,
-            className: "rounded",
-          });
-        }
+      if (err instanceof Error && err.message.includes("Insufficient credits")) {
+        toast({
+          title: "Out of Credits",
+          description:
+            "You've used all your credits for today. Credits will reset tomorrow!",
+          variant: "destructive",
+          duration: 5000,
+          className: "rounded",
+        });
       }
     },
   });
@@ -136,9 +118,13 @@ export function DiagramGeneratorForm({
       hasInitialized.current = true;
       setInput(textQuery);
 
+      if (!session?.user) {
+        onShowLogin();
+        return;
+      }
+
       const generateFromQuery = async () => {
-        // Check credits first
-        if (session?.user && userCredits?.credits !== undefined) {
+        if (userCredits?.credits !== undefined) {
           const requiredCredits = isComplex ? 2 : 1;
           if (userCredits.credits < requiredCredits) {
             toast({
@@ -150,18 +136,11 @@ export function DiagramGeneratorForm({
             });
             return;
           }
-        } else {
-          const requiredCredits = isComplex ? 2 : 1;
-          if (anonymousUser.credits < requiredCredits) {
-            onShowLogin();
-            return;
-          }
         }
 
         generateDiagram.mutate({
           text: textQuery,
           isComplex,
-          anonymousId: !session?.user ? anonymousUser.id : undefined,
         });
 
         // Clear the URL query parameter after generation starts
@@ -170,33 +149,21 @@ export function DiagramGeneratorForm({
 
       void generateFromQuery();
     }
-  }, [
-    session?.user,
-    userCredits?.credits,
-    isComplex,
-    anonymousUser.credits,
-    anonymousUser.id,
-    generateDiagram,
-    toast,
-    onShowLogin,
-  ]);
+  }, [session?.user, userCredits?.credits, isComplex, generateDiagram, toast, onShowLogin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     onError(null);
 
-    // Check credits based on user type
-    if (session?.user && userCredits?.credits !== undefined) {
+    if (!session?.user) {
+      onShowLogin();
+      return;
+    }
+
+    if (userCredits?.credits !== undefined) {
       const requiredCredits = isComplex ? 2 : 1;
       if (userCredits.credits < requiredCredits) {
         setShowCreditDialog(true);
-        return;
-      }
-    } else {
-      // Check anonymous user credits
-      const requiredCredits = isComplex ? 2 : 1;
-      if (anonymousUser.credits < requiredCredits) {
-        onShowLogin();
         return;
       }
     }
@@ -209,7 +176,6 @@ export function DiagramGeneratorForm({
     generateDiagram.mutate({
       text: input,
       isComplex,
-      anonymousId: !session?.user ? anonymousUser.id : undefined,
     });
   };
 
@@ -254,15 +220,17 @@ export function DiagramGeneratorForm({
                     Generate detailed and sophisticated diagram
                   </Label>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">
-                    <AnimatedCounter 
-                      value={session === null ? anonymousCredits : userCredits?.credits}
-                      className="tabular-nums"
-                    />
-                  </Badge>
-                  {isComplex && <span className="text-xs text-muted-foreground">(Uses 2 credits)</span>}
-                </div>
+                {session?.user && (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      <AnimatedCounter 
+                        value={userCredits?.credits}
+                        className="tabular-nums"
+                      />
+                    </Badge>
+                    {isComplex && <span className="text-xs text-muted-foreground">(Uses 2 credits)</span>}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -289,7 +257,7 @@ export function DiagramGeneratorForm({
                     Generating
                   </>
                 ) : (
-                  "Generate Diagram"
+                  session?.user ? "Generate Diagram" : "Login to Generate"
                 )}
               </Button>
             </div>
