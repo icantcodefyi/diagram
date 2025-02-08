@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { renderMermaidDiagram } from "@/lib/mermaid-config";
-import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -33,7 +32,6 @@ export function DiagramEditor({
   content,
   diagramId,
   onUpdate,
-  className,
   showLabel = true,
 }: DiagramEditorProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -90,20 +88,23 @@ export function DiagramEditor({
     if (isOpen) {
       const timer = setTimeout(() => {
         try {
-          void renderMermaidDiagram(editedContent, `#${previewDiagramId}`).catch((err) => {
+          void renderMermaidDiagram(editedContent, `#${previewDiagramId}`).catch((err: unknown) => {
             // Extract the relevant error message
-            const errorMessage = err.message;
-            const parseError = errorMessage.match(/Error: Parse error on line (\d+):[\s\S]*?Expecting '([^']+)'.*?got '([^']+)'/);
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            const parseErrorRegex = /Error: Parse error on line (\d+):[\s\S]*?Expecting '([^']+)'.*?got '([^']+)'/;
+            const parseError = parseErrorRegex.exec(errorMessage);
             
             if (parseError) {
               const [, line, expected, got] = parseError;
               setError(`Error on line ${line}: Expected '${expected}' but got '${got}'`);
             } else {
-              setError(errorMessage.replace("[ERROR] : ", "").trim());
+              const cleanedMessage = String(errorMessage).replace("[ERROR] : ", "").trim();
+              setError(cleanedMessage);
             }
           });
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "An error occurred");
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : "An error occurred";
+          setError(errorMessage);
         }
       }, 500);
       return () => clearTimeout(timer);
