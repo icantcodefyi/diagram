@@ -22,7 +22,7 @@ const fontHeading = Bricolage_Grotesque({
 export const metadata: Metadata = {
   title: "AutoDiagram",
   description: "Generate beautiful diagrams instantly using AI. Transform your ideas into clear, professional diagrams with natural language.",
-  metadataBase: new URL('https://diagram.ani.ink'),
+  metadataBase: new URL('https://www.autodiagram.com/'),
   authors: [{ name: "Ani" }],
   keywords: ["diagram generator", "AI diagrams", "flowchart maker", "sequence diagram", "UML diagrams", "mermaid diagrams"],
   creator: "Ani",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://diagram.ani.ink",
+    url: "https://www.autodiagram.com/",
     title: "AutoDiagram by Ani",
     description: "Generate beautiful diagrams instantly using AI. Transform your ideas into clear, professional diagrams with natural language.",
     siteName: "AutoDiagram",
