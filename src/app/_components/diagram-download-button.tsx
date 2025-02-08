@@ -277,7 +277,6 @@ export function DiagramDownloadButton({
         <Button variant={variant} size={size} className="gap-2">
           <Download className="mr-2 h-4 w-4" />
           {showLabel && "Download"}
-          <ChevronDown className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

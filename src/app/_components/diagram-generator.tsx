@@ -14,6 +14,10 @@ export function DiagramGenerator() {
   const [error, setError] = useState<string | null>(null);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
 
+  const handleDiagramUpdate = (newContent: string) => {
+    setDiagram(newContent);
+  };
+
   return (
     <div className="container max-w-4xl space-y-6 py-6">
       <div className="relative">
@@ -32,7 +36,11 @@ export function DiagramGenerator() {
       </div>
 
       {diagram && !error && (
-        <DiagramPreview diagram={diagram} diagramType={diagramType} />
+        <DiagramPreview 
+          diagram={diagram} 
+          diagramType={diagramType} 
+          onUpdate={handleDiagramUpdate}
+        />
       )}
 
       <LoginDialog

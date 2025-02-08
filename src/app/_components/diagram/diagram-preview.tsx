@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -17,9 +17,10 @@ import { renderMermaidDiagram } from "@/lib/mermaid-config";
 interface DiagramPreviewProps {
   diagram: string;
   diagramType: DiagramType | null;
+  onUpdate?: (newContent: string) => void;
 }
 
-export function DiagramPreview({ diagram, diagramType }: DiagramPreviewProps) {
+export function DiagramPreview({ diagram, diagramType, onUpdate }: DiagramPreviewProps) {
   const {
     currentTheme,
     scale,
@@ -32,6 +33,42 @@ export function DiagramPreview({ diagram, diagramType }: DiagramPreviewProps) {
     diagram,
     diagramId: "mermaid-diagram",
   });
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - position.x,
+      y: e.clientY - position.y,
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      setPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y,
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      if (e.deltaY < 0) {
+        zoomIn();
+      } else {
+        zoomOut();
+      }
+    }
+  };
 
   // Initial render and theme changes
   useEffect(() => {
@@ -52,20 +89,25 @@ export function DiagramPreview({ diagram, diagramType }: DiagramPreviewProps) {
       <CardContent>
         <div className="relative rounded-lg bg-white p-4 dark:bg-slate-900">
           <div
-            className="flex min-h-[500px] items-center justify-center overflow-hidden"
+            className="flex min-h-[500px] items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
             style={{
               position: 'relative',
               width: '100%',
             }}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onWheel={handleWheel}
           >
             <div
               style={{
                 transformOrigin: "center center",
-                transition: "transform 0.2s ease-in-out",
+                transition: isDragging ? "none" : "transform 0.2s ease-in-out",
                 position: 'absolute',
                 left: '50%',
                 top: '50%',
-                transform: `translate(-50%, -50%) scale(${scale})`,
+                transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`,
               }}
             >
               <div id="mermaid-diagram" />
@@ -82,9 +124,10 @@ export function DiagramPreview({ diagram, diagramType }: DiagramPreviewProps) {
             onZoomIn={zoomIn}
             onZoomOut={zoomOut}
             onResetZoom={resetZoom}
+            onContentUpdate={onUpdate}
           />
         </div>
       </CardContent>
     </Card>
   );
-} 
+}
