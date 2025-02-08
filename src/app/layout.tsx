@@ -20,13 +20,13 @@ const fontHeading = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
-  title: "Diagramify",
+  title: "AutoDiagram",
   description: "Generate beautiful diagrams instantly using AI. Transform your ideas into clear, professional diagrams with natural language.",
   metadataBase: new URL('https://diagram.ani.ink'),
   authors: [{ name: "Ani" }],
   keywords: ["diagram generator", "AI diagrams", "flowchart maker", "sequence diagram", "UML diagrams", "mermaid diagrams"],
   creator: "Ani",
-  publisher: "Diagramify",
+  publisher: "AutoDiagram",
   robots: {
     index: true,
     follow: true,
@@ -39,21 +39,21 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "https://diagram.ani.ink",
-    title: "Diagramify by Ani",
+    title: "AutoDiagram by Ani",
     description: "Generate beautiful diagrams instantly using AI. Transform your ideas into clear, professional diagrams with natural language.",
-    siteName: "Diagramify",
+    siteName: "AutoDiagram",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Diagramify - AI Powered Diagram Generator",
+        alt: "AutoDiagram - AI Powered Diagram Generator",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Diagramify by Ani",
+    title: "AutoDiagram by Ani",
     description: "Generate beautiful diagrams instantly using AI. Transform your ideas into clear, professional diagrams with natural language.",
     images: ["/og-image.png"],
     creator: "@ani",

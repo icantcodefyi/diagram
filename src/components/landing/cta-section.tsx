@@ -11,7 +11,7 @@ export function CtaSection() {
           Start Creating Beautiful Diagrams Today
         </h2>
         <p className="max-w-xl text-lg text-primary-foreground/80 text-center">
-          Join thousands of professionals who trust Diagramify to transform their ideas into stunning visuals.
+          Join thousands of professionals who trust AutoDiagram to transform their ideas into stunning visuals.
         </p>
         <Button
           size="lg"
@@ -19,7 +19,7 @@ export function CtaSection() {
           variant="outline"
           className="cursor-pointer border-border bg-background hover:bg-bacground/90 h-14 text-base font-semibold font-heading px-10"
         >
-          <Link href="/generate">Try Diagramify Free</Link>
+          <Link href="/generate">Try AutoDiagram Free</Link>
         </Button>
         <Image
           alt="SaaS Dashboard"

@@ -13,8 +13,8 @@ export function Faq() {
         </div>
         <Accordion type="single" collapsible className="mt-6 w-full max-w-3xl flex flex-col gap-4">
           <FaqItem
-            answer="Diagramify uses advanced AI to transform your text descriptions into professional diagrams. Simply describe what you want, and our AI creates accurate, visually appealing diagrams instantly."
-            question="How does Diagramify work?"
+            answer="AutoDiagram uses advanced AI to transform your text descriptions into professional diagrams. Simply describe what you want, and our AI creates accurate, visually appealing diagrams instantly."
+            question="How does AutoDiagram work?"
           />
           <FaqItem
             answer="We support a wide range of diagram types including flowcharts, organizational charts, system architectures, user journeys, and more. Our AI adapts to your needs."
@@ -25,12 +25,12 @@ export function Faq() {
             question="Can I export my diagrams?"
           />
           <FaqItem
-            answer="Diagramify is perfect for software developers, project managers, business analysts, educators, designers, and anyone who needs to create professional diagrams quickly."
-            question="Who is Diagramify for?"
+            answer="AutoDiagram is perfect for software developers, project managers, business analysts, educators, designers, and anyone who needs to create professional diagrams quickly."
+            question="Who is AutoDiagram for?"
           />
           <FaqItem
             answer="Yes, our AI automatically detects and resolves issues in your diagrams, ensuring they're accurate and functional. You can also make quick edits manually if needed."
-            question="Does Diagramify help with error correction?"
+            question="Does AutoDiagram help with error correction?"
           />
           <FaqItem
             answer="Yes, we prioritize data security with industry-standard protocols and encryption measures to protect your diagrams and information."

@@ -7,6 +7,7 @@ import Container from "@/app/_components/blogs/container";
 import Header from "@/app/_components/blogs/header";
 import { PostBody } from "@/app/_components/blogs/post-body";
 import { PostHeader } from "@/app/_components/blogs/post-header";
+import { CtaButton } from "@/components/landing/cta-button";
 
 type Params = {
   params: Promise<{
@@ -39,6 +40,12 @@ export default async function Post(props: Params) {
             <PostBody content={content} />
           </article>
         </Container>
+        <div className="flex justify-center">
+          <CtaButton
+            text="Try AutoDiagram for Free"
+            href="/"
+          />
+        </div>
       </main>
     );
   } catch (error) {
@@ -55,7 +62,7 @@ export async function generateMetadata(props: Params): Promise<Metadata> {
     return notFound();
   }
 
-  const title = `${post.title} | Next.js Blog Example with ${CMS_NAME}`;
+  const title = `${post.title} | ${CMS_NAME}`;
 
   return {
     title,

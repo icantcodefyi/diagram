@@ -22,7 +22,7 @@ export default function Section() {
                 Transform Code into Beautiful Diagrams
               </h2>
               <p className="text-lg text-muted-foreground">
-                Diagramify is your AI-powered companion for converting code into
+                AutoDiagram is your AI-powered companion for converting code into
                 clear, elegant diagrams. Whether you&apos;re documenting
                 architecture, explaining workflows, or visualizing data
                 structures, we make it simple and beautiful.
