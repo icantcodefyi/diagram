@@ -7,17 +7,46 @@ import crypto from "crypto";
 const MONTHLY_CREDITS = 500;
 
 interface LemonSqueezySubscriptionData {
+  id: string;
+  type: string;
   attributes: {
+    store_id: number;
+    customer_id: number;
+    order_id: number;
+    order_item_id: number;
+    product_id: number;
+    variant_id: number;
     customer_email: string;
-    subscription_id: string;
-    ends_at: string;
     status: string;
+    card_brand: string;
+    card_last_four: string;
+    pause: null | Record<string, unknown>;
+    cancelled: boolean;
+    trial_ends_at: null | string;
+    billing_anchor: number;
+    urls: {
+      update_payment_method: string;
+    };
+    renews_at: string;
+    ends_at: null | string;
+    created_at: string;
+    updated_at: string;
+    test_mode: boolean;
+  };
+  relationships?: {
+    customer?: {
+      data: {
+        id: string;
+        type: string;
+      };
+    };
   };
 }
 
 interface LemonSqueezyWebhookBody {
   meta: {
     event_name: string;
+    custom_data: Record<string, unknown>;
   };
   data: LemonSqueezySubscriptionData;
 }
@@ -36,10 +65,14 @@ function verifyWebhookSignature(
 async function handleSubscriptionCreated(data: LemonSqueezySubscriptionData) {
   console.log("Processing subscription_created event:", {
     email: data.attributes.customer_email,
-    subscription_id: data.attributes.subscription_id,
+    subscription_id: data.id,
+    data: JSON.stringify(data, null, 2),
   });
 
-  const { customer_email, subscription_id, ends_at } = data.attributes;
+  const { customer_email } = data.attributes;
+  const subscription_id = data.id;
+  const ends_at = data.attributes.ends_at ?? data.attributes.renews_at;
+
   const user = await db.user.findUnique({
     where: { email: customer_email },
     include: { credits: true },
@@ -108,11 +141,14 @@ async function handleSubscriptionCreated(data: LemonSqueezySubscriptionData) {
 
 async function handleSubscriptionUpdated(data: LemonSqueezySubscriptionData) {
   console.log("Processing subscription_updated event:", {
-    subscription_id: data.attributes.subscription_id,
+    subscription_id: data.id,
     status: data.attributes.status,
+    data: JSON.stringify(data, null, 2),
   });
 
-  const { subscription_id, status, ends_at } = data.attributes;
+  const subscription_id = data.id;
+  const { status } = data.attributes;
+  const ends_at = data.attributes.ends_at ?? data.attributes.renews_at;
 
   try {
     const updated = await db.subscription.update({
@@ -120,7 +156,7 @@ async function handleSubscriptionUpdated(data: LemonSqueezySubscriptionData) {
       data: {
         status,
         currentPeriodEnd: new Date(ends_at),
-        cancelAtPeriodEnd: status === "cancelled",
+        cancelAtPeriodEnd: data.attributes.cancelled,
       },
     });
     console.log("Updated subscription:", updated);
@@ -132,10 +168,11 @@ async function handleSubscriptionUpdated(data: LemonSqueezySubscriptionData) {
 
 async function handleSubscriptionCancelled(data: LemonSqueezySubscriptionData) {
   console.log("Processing subscription_cancelled event:", {
-    subscription_id: data.attributes.subscription_id,
+    subscription_id: data.id,
+    data: JSON.stringify(data, null, 2),
   });
 
-  const { subscription_id } = data.attributes;
+  const subscription_id = data.id;
 
   try {
     const cancelled = await db.subscription.update({
@@ -152,55 +189,6 @@ async function handleSubscriptionCancelled(data: LemonSqueezySubscriptionData) {
   }
 }
 
-async function handleSubscriptionResumed(data: LemonSqueezySubscriptionData) {
-  const { subscription_id, ends_at } = data.attributes;
-  const subscription = await db.subscription.findUnique({
-    where: { lemonSqueezyId: subscription_id },
-    include: { user: { include: { credits: true } } },
-  });
-
-  if (!subscription?.user) {
-    console.error("Subscription or user not found:", subscription_id);
-    return;
-  }
-
-  await db.$transaction(async (tx) => {
-    // Update subscription status
-    await tx.subscription.update({
-      where: { lemonSqueezyId: subscription_id },
-      data: {
-        status: "active",
-        currentPeriodEnd: new Date(ends_at),
-        cancelAtPeriodEnd: false,
-      },
-    });
-
-    // Add new monthly credits if they don't have any
-    if (subscription.user.credits?.monthlyCredits === 0) {
-      await tx.userCredits.update({
-        where: { userId: subscription.user.id },
-        data: {
-          credits: (subscription.user.credits?.credits || 0) + MONTHLY_CREDITS,
-          monthlyCredits: MONTHLY_CREDITS,
-          lastMonthlyReset: new Date(),
-        },
-      });
-    }
-  });
-}
-
-async function handleSubscriptionExpired(data: LemonSqueezySubscriptionData) {
-  const { subscription_id } = data.attributes;
-
-  await db.subscription.update({
-    where: { lemonSqueezyId: subscription_id },
-    data: {
-      status: "expired",
-      cancelAtPeriodEnd: false,
-    },
-  });
-}
-
 export async function POST(req: Request) {
   try {
     const headersList = headers();
@@ -210,6 +198,7 @@ export async function POST(req: Request) {
     console.log("Received webhook request", {
       signature: signature ? "present" : "missing",
       bodyLength: rawBody.length,
+      rawBody,
     });
 
     if (!verifyWebhookSignature(rawBody, signature)) {
@@ -224,7 +213,9 @@ export async function POST(req: Request) {
     const eventName = body.meta.event_name;
     const data = body.data;
 
-    console.log("Processing webhook event:", eventName);
+    console.log("Processing webhook event:", eventName, {
+      data: JSON.stringify(data, null, 2),
+    });
 
     switch (eventName) {
       case "subscription_created":
@@ -236,12 +227,6 @@ export async function POST(req: Request) {
       case "subscription_cancelled":
         await handleSubscriptionCancelled(data);
         break;
-      case "subscription_resumed":
-        await handleSubscriptionResumed(data);
-        break;
-      case "subscription_expired":
-        await handleSubscriptionExpired(data);
-        break;
       default:
         console.log("Unhandled event type:", eventName);
     }
@@ -250,6 +235,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Webhook error:", error);
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
