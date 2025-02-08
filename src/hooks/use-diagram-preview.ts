@@ -26,7 +26,10 @@ interface UseDiagramPreviewProps {
   diagramId: string;
 }
 
-export function useDiagramPreview({ diagram, diagramId }: UseDiagramPreviewProps) {
+export function useDiagramPreview({
+  diagram,
+  diagramId,
+}: UseDiagramPreviewProps) {
   const [currentTheme, setCurrentTheme] = useState<MermaidTheme>("default");
   const [scale, setScale] = useState(DEFAULT_SCALE);
   const { toast } = useToast();
@@ -41,22 +44,24 @@ export function useDiagramPreview({ diagram, diagramId }: UseDiagramPreviewProps
     const adjustScale = () => {
       const container = document.getElementById(diagramId)?.parentElement;
       const diagram = document.getElementById(diagramId);
-      
+
       if (container && diagram) {
         const containerWidth = container.clientWidth;
         const containerHeight = container.clientHeight;
         const diagramWidth = diagram.scrollWidth;
         const diagramHeight = diagram.scrollHeight;
 
-        // Start with default 200% zoom
-        let newScale = DEFAULT_SCALE;
-
-        // Only adjust if diagram is too large at 200%
-        if (diagramWidth * DEFAULT_SCALE > containerWidth * 0.9 || 
-            diagramHeight * DEFAULT_SCALE > containerHeight * 0.9) {
-          const scaleX = (containerWidth * 0.9) / diagramWidth;
-          const scaleY = (containerHeight * 0.9) / diagramHeight;
-          newScale = Math.min(Math.max(Math.min(scaleX, scaleY), MIN_ZOOM), MAX_ZOOM);
+        // Only adjust if diagram is too large at DEFAULT_SCALE (300%)
+        if (
+          diagramWidth * DEFAULT_SCALE > containerWidth * 0.95 ||
+          diagramHeight * DEFAULT_SCALE > containerHeight * 0.95
+        ) {
+          const scaleX = (containerWidth * 0.95) / diagramWidth;
+          const scaleY = (containerHeight * 0.95) / diagramHeight;
+          const newScale = Math.min(
+            Math.max(Math.min(scaleX, scaleY) * 3, MIN_ZOOM),
+            DEFAULT_SCALE,
+          );
           setScale(newScale);
         }
 
@@ -96,24 +101,27 @@ export function useDiagramPreview({ diagram, diagramId }: UseDiagramPreviewProps
     }
   };
 
-  const handleThemeChange = useCallback(async (theme: MermaidTheme) => {
-    try {
-      setCurrentTheme(theme);
-      await changeTheme(theme);
-      if (diagram) {
-        await renderMermaidDiagram(diagram, `#${diagramId}`);
+  const handleThemeChange = useCallback(
+    async (theme: MermaidTheme) => {
+      try {
+        setCurrentTheme(theme);
+        await changeTheme(theme);
+        if (diagram) {
+          await renderMermaidDiagram(diagram, `#${diagramId}`);
+        }
+      } catch (err) {
+        console.error("Failed to change theme:", err);
+        toast({
+          title: "Error",
+          description: "Failed to change theme",
+          variant: "destructive",
+          duration: 2000,
+          className: "rounded",
+        });
       }
-    } catch (err) {
-      console.error("Failed to change theme:", err);
-      toast({
-        title: "Error",
-        description: "Failed to change theme",
-        variant: "destructive",
-        duration: 2000,
-        className: "rounded",
-      });
-    }
-  }, [diagram, diagramId, toast]);
+    },
+    [diagram, diagramId, toast],
+  );
 
   const zoomIn = () => {
     setScale((prev) => Math.min(prev + ZOOM_STEP, MAX_ZOOM));
@@ -138,4 +146,4 @@ export function useDiagramPreview({ diagram, diagramId }: UseDiagramPreviewProps
     isMinZoom: scale <= MIN_ZOOM,
     isMaxZoom: scale >= MAX_ZOOM,
   };
-} 
+}
