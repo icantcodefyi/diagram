@@ -95,7 +95,7 @@ model UserCredits {
     id              String   @id @default(cuid())
     user            User     @relation(fields: [userId], references: [id])
     userId          String   @unique
-    credits         Int      @default(10)
+    credits         Int      @default(20)
     lastCreditReset DateTime @default(now())
     
     @@index([userId])

@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/texturebutton";
 import { Expand, Copy, Trash2 } from "lucide-react";
 import { type Diagram } from "@/store/diagram-store";
-import { DiagramPreviewModal } from "./diagram-preview-modal";
+import { DiagramPreviewModal } from "@/app/_components/diagram/diagram-preview-modal";
 import { renderMermaidDiagram } from "@/lib/mermaid-config";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/trpc/react";
@@ -97,7 +97,7 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
           <div className="absolute inset-0 bg-black/0 transition-colors duration-200 group-hover:bg-black/5" />
           <div className="absolute bottom-4 right-4 flex items-center gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
             <Button
-              variant="secondary"
+              variant="icon"
               size="icon"
               onClick={() => setIsDeleteDialogOpen(true)}
               className="h-8 w-8"
@@ -105,7 +105,7 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
             <Button
-              variant="secondary"
+              variant="icon"
               size="icon"
               onClick={handleCopyCode}
               className="h-8 w-8"
@@ -121,7 +121,7 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
               simpleMode={true}
             />
             <Button
-              variant="secondary"
+              variant="icon"
               size="icon"
               onClick={() => setIsModalOpen(true)}
               className="h-8 w-8"

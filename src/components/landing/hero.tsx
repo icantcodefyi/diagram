@@ -1,15 +1,18 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-import { CtaButton } from "@/components/landing/cta-button";
 import { SocialProofLogo } from "@/components/landing/social-proof-logo";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export function Hero() {
   const [inputText, setInputText] = useState("");
+  const videoRef = useRef<HTMLVideoElement>(null);
   const router = useRouter();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -18,6 +21,19 @@ export function Hero() {
       // Encode the input text for URL safety
       const encodedText = encodeURIComponent(inputText);
       router.push(`/generate?text=${encodedText}`);
+    }
+  };
+
+  const handleMouseEnter = () => {
+    if (videoRef.current) {
+      void videoRef.current.play();
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
     }
   };
 
@@ -30,7 +46,7 @@ export function Hero() {
           transition={{ delay: 0.8, duration: 0.4 }}
           className="flex cursor-pointer items-center gap-1 rounded-full bg-secondary/10 px-4 py-1 font-medium text-secondary hover:bg-secondary/20"
         >
-          <span className="text-sm">Introducing SocialLens</span>
+          <span className="text-sm">Introducing Diagramify</span>
         </motion.div>
         <motion.h1
           animate={{ y: 0, opacity: 1 }}
@@ -38,7 +54,7 @@ export function Hero() {
           transition={{ delay: 0, duration: 0.4 }}
           className="text-balance text-center font-heading text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl"
         >
-          Generate diagrams from your text with AI
+          Transform Ideas into Professional Diagrams with AI
         </motion.h1>
         <motion.p
           animate={{ y: 0, opacity: 1 }}
@@ -46,7 +62,7 @@ export function Hero() {
           transition={{ delay: 0.2, duration: 0.4 }}
           className="max-w-lg text-center text-lg text-muted-foreground sm:text-xl"
         >
-          Transform your ideas into beautiful diagrams instantly using AI
+          Say goodbye to manual diagram creation. Describe your concept and let our AI craft professional-grade visuals instantly.
         </motion.p>
         <motion.form
           onSubmit={handleSubmit}
@@ -55,37 +71,39 @@ export function Hero() {
           transition={{ delay: 0.4, duration: 0.4 }}
           className="flex w-full max-w-xl flex-col gap-4 sm:flex-row"
         >
-          <input
+          <Input
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             placeholder="Describe your diagram..."
-            className="flex-1 rounded-lg border bg-background px-4 py-2 text-foreground"
+            className="h-11 flex-1 bg-background"
           />
-          <button
-            type="submit"
-            className="rounded-lg bg-primary px-6 py-2 font-medium text-primary-foreground hover:bg-primary/90"
-          >
+          <Button type="submit" className="h-11">
             Generate
-          </button>
+          </Button>
         </motion.form>
         <motion.div
           animate={{ y: 0.4, opacity: 1 }}
           initial={{ y: 10, opacity: 0 }}
           transition={{ delay: 0.6, duration: 0.4 }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
         >
-          <Image
-            alt="SaaS Dashboard"
-            src="/landing/Desktop---104.png"
-            width={1100}
-            height={698}
-            priority
-          />
+          <video
+            ref={videoRef}
+            muted
+            loop
+            playsInline
+            className="rounded-lg shadow-lg"
+          >
+            <source src="/video.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
         </motion.div>
       </div>
       <div className="container mt-14 max-w-5xl">
         <h2 className="mb-12 text-center text-sm font-semibold leading-8 text-muted-foreground sm:text-lg">
-          Trusted by the best companies in the world
+          Trusted by developers, teams, and businesses worldwide
         </h2>
         <div className="grid w-full grid-cols-4 gap-6 sm:grid-cols-6 lg:grid-cols-5">
           <SocialProofLogo image="/landing/microsoft.webp" />

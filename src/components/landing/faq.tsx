@@ -13,28 +13,28 @@ export function Faq() {
         </div>
         <Accordion type="single" collapsible className="mt-6 w-full max-w-3xl flex flex-col gap-4">
           <FaqItem
-            answer="It enhances your social media presence by analyzing data, identifying trends, and providing actionable insights for more engaging content."
-            question="What's the main purpose of SociaLens for social media?"
+            answer="Diagramify uses advanced AI to transform your text descriptions into professional diagrams. Simply describe what you want, and our AI creates accurate, visually appealing diagrams instantly."
+            question="How does Diagramify work?"
           />
           <FaqItem
-            answer="It uses advanced algorithms to suggest optimal posting times, relevant hashtags, and insights on content types that resonate with your audience."
-            question="How does the AI tool optimize content?"
+            answer="We support a wide range of diagram types including flowcharts, organizational charts, system architectures, user journeys, and more. Our AI adapts to your needs."
+            question="What types of diagrams can I create?"
           />
           <FaqItem
-            answer="Yes, it seamlessly integrates with popular platforms like Facebook, Twitter, Instagram, and LinkedIn for centralized management"
-            question="Can I integrate SociaLens with multiple platforms?"
+            answer="Yes! You can export your diagrams as SVG, PNG, or get shareable links. This makes it easy to use your diagrams in presentations, documents, or collaborate with others."
+            question="Can I export my diagrams?"
           />
           <FaqItem
-            answer="It analyzes your audience, identifies demographics and interests, and suggests strategies to expand reach and engagement."
-            question="How does SociaLens assist in audience targeting?"
+            answer="Diagramify is perfect for software developers, project managers, business analysts, educators, designers, and anyone who needs to create professional diagrams quickly."
+            question="Who is Diagramify for?"
           />
           <FaqItem
-            answer="Yes, we prioritize data security with industry-standard protocols and encryption measures to safeguard your information."
+            answer="Yes, our AI automatically detects and resolves issues in your diagrams, ensuring they're accurate and functional. You can also make quick edits manually if needed."
+            question="Does Diagramify help with error correction?"
+          />
+          <FaqItem
+            answer="Yes, we prioritize data security with industry-standard protocols and encryption measures to protect your diagrams and information."
             question="Is my data secure?"
-          />
-          <FaqItem
-            answer="Yes, team accounts are available. Multiple users can collaborate under a single account, streamlining social media optimization efforts."
-            question="Do you offer team accounts?"
           />
         </Accordion>
       </div>

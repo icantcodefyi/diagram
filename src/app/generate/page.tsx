@@ -5,10 +5,9 @@ import { AuthButton } from "@/app/_components/auth-button";
 import { DiagramHistory } from "@/app/_components/diagram-history";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { useEffect } from "react";
-import { api } from "@/trpc/react";
+import { useEffect, Suspense } from "react";
 
-export default function GeneratePage() {
+function GeneratePageContent() {
   const searchParams = useSearchParams();
   const text = searchParams.get("text");
 
@@ -61,5 +60,28 @@ export default function GeneratePage() {
         </a>
       </footer>
     </div>
+  );
+}
+
+export default function GeneratePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <Image
+              src="/logo.png"
+              alt="Logo"
+              width={80}
+              height={80}
+              className="animate-pulse"
+            />
+            <div className="h-2 w-24 animate-pulse rounded-full bg-gray-200" />
+          </div>
+        </div>
+      }
+    >
+      <GeneratePageContent />
+    </Suspense>
   );
 }

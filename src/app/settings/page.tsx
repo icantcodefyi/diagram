@@ -95,7 +95,7 @@ export default function SettingsPage() {
       <div className="mb-8">
         <Button
           variant="link"
-          onClick={() => router.push("/")}
+          onClick={() => router.push("/generate")}
         >
           <ArrowLeft className="h-4 w-4" />
           Back
