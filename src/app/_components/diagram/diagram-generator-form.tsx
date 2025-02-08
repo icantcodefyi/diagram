@@ -15,6 +15,7 @@ import {
 } from "@/types/diagram";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { getAnonymousUser, updateAnonymousCredits } from "@/lib/anonymous-user";
 import { renderMermaidDiagram } from "@/lib/mermaid-config";
 import {
@@ -25,6 +26,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { AnimatedCounter } from "@/components/ui/animated-counter";
 
 interface DiagramGeneratorFormProps {
   onDiagramGenerated: (diagram: string, type: DiagramType) => void;
@@ -252,11 +254,14 @@ export function DiagramGeneratorForm({
                     Generate detailed and sophisticated diagram
                   </Label>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  {session?.user
-                    ? `Credits: ${userCredits?.credits ?? 0} / 20`
-                    : `Credits: ${anonymousCredits} / 5`}
-                  {isComplex && <span className="ml-1">(Uses 2 credits)</span>}
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    <AnimatedCounter 
+                      value={session === null ? anonymousCredits : userCredits?.credits}
+                      className="tabular-nums"
+                    />
+                  </Badge>
+                  {isComplex && <span className="text-xs text-muted-foreground">(Uses 2 credits)</span>}
                 </div>
               </div>
             </div>

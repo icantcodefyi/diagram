@@ -1,11 +1,15 @@
 import { Sparkles, Code, Share2, CheckCircle } from "lucide-react";
-import Image from "next/image";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
-
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { DIAGRAM_TYPES } from "@/types/diagram-types";
+import { DiagramTypesSlider } from "@/components/landing/diagram-types-slider";
+import { CtaButton } from "@/components/landing/cta-button";
 
 export default function Section() {
   return (
@@ -64,16 +68,16 @@ export default function Section() {
               </div>
             </div>
             <div className="relative">
-             <video
-              autoPlay
-              muted
-              loop
-              playsInline
-              className="rounded-xl object-cover"
-             >
-              <source src="/video.mp4" type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
+              <video
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="rounded-xl object-cover"
+              >
+                <source src="/video.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
               <div className="absolute -bottom-6 -left-6 hidden lg:block">
                 <div className="rounded-lg bg-background p-6 shadow-lg">
                   <div className="flex items-center gap-4">
@@ -194,42 +198,25 @@ export default function Section() {
               </CardContent>
             </Card>
           </div>
-          <div className="mt-12 rounded-lg border bg-card p-6">
-            <h3 className="mb-4 font-heading text-xl">
-              Additional Diagram Types
-            </h3>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-              <Badge variant="secondary" className="justify-center">
-                Mind Maps
-              </Badge>
-              <Badge variant="secondary" className="justify-center">
-                Timelines
-              </Badge>
-              <Badge variant="secondary" className="justify-center">
-                ZenUML
-              </Badge>
-              <Badge variant="secondary" className="justify-center">
-                Sankey
-              </Badge>
-              <Badge variant="secondary" className="justify-center">
-                XY Charts
-              </Badge>
-              <Badge variant="secondary" className="justify-center">
-                Block Diagrams
-              </Badge>
-              <Badge variant="secondary" className="justify-center">
-                Packet Diagrams
-              </Badge>
-              <Badge variant="secondary" className="justify-center">
-                Architecture
-              </Badge>
+          <div className="mt-12 rounded-lg border bg-card p-4 sm:p-6 md:p-8">
+            <div className="grid grid-cols-1 items-center gap-4 lg:grid-cols-2 lg:gap-8">
+              <div className="space-y-3 sm:space-y-4">
+                <h3 className="font-heading text-2xl font-semibold sm:text-3xl">
+                  Additional Types of Diagrams
+                </h3>
+                <p className="text-base text-muted-foreground sm:text-lg">
+                  Explore our diverse collection of diagram types, each designed
+                  to help you visualize different aspects of your projects
+                  effectively.
+                </p>
+              </div>
+              <div className="mx-auto w-full max-w-sm sm:max-w-md">
+                <DiagramTypesSlider diagrams={DIAGRAM_TYPES} />
+              </div>
             </div>
           </div>
-          <div className="mt-12 text-center">
-            <Button variant="default" size="lg" className="gap-2">
-              <PlusCircle className="h-4 w-4" />
-              Start Creating Diagrams
-            </Button>
+          <div className="flex items-center justify-center mt-12 w-full">
+            <CtaButton text="Start Creating Diagrams" href="/generate" className="w-[50%]]" />
           </div>
         </div>
       </section>
