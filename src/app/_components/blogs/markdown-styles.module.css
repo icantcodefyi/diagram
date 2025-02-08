@@ -1,5 +1,5 @@
 .markdown {
-  @apply text-lg leading-relaxed;
+  @apply text-lg leading-relaxed text-gray-700;
 }
 
 .markdown p,
@@ -9,10 +9,84 @@
   @apply my-6;
 }
 
+.markdown h1 {
+  @apply text-4xl font-bold mt-16 mb-6 leading-tight text-gray-900 font-heading;
+}
+
 .markdown h2 {
-  @apply text-3xl mt-12 mb-4 leading-snug;
+  @apply text-3xl font-semibold mt-12 mb-4 leading-snug text-gray-900 font-heading;
 }
 
 .markdown h3 {
-  @apply text-2xl mt-8 mb-4 leading-snug;
+  @apply text-2xl font-medium mt-8 mb-4 leading-snug text-gray-900 font-heading;
+}
+
+.markdown h4 {
+  @apply text-xl font-medium mt-6 mb-3 leading-snug text-gray-900 font-heading;
+}
+
+.markdown ul,
+.markdown ol {
+  @apply pl-8;
+}
+
+.markdown ul {
+  @apply list-disc;
+}
+
+.markdown ol {
+  @apply list-decimal;
+}
+
+.markdown li {
+  @apply mb-2;
+}
+
+.markdown blockquote {
+  @apply pl-4 py-1 border-l-4 border-gray-200 bg-gray-50 rounded-sm italic text-gray-700;
+}
+
+.markdown a {
+  @apply text-blue-600 hover:text-blue-800 underline transition-colors;
+}
+
+.markdown pre {
+  @apply my-6 p-4 bg-gray-900 rounded-lg overflow-x-auto;
+}
+
+.markdown code {
+  @apply font-mono text-sm;
+}
+
+.markdown pre code {
+  @apply text-gray-100;
+}
+
+.markdown :not(pre) > code {
+  @apply bg-gray-100 rounded px-1 py-0.5 text-gray-800;
+}
+
+.markdown img {
+  @apply rounded-lg shadow-md max-w-full mx-auto my-8;
+}
+
+.markdown hr {
+  @apply my-8 border-gray-200;
+}
+
+.markdown table {
+  @apply w-full my-6 border-collapse;
+}
+
+.markdown th,
+.markdown td {
+  @apply border border-gray-300 px-4 py-2;
+}
+
+.markdown th {
+  @apply bg-gray-100 font-semibold;
+}
+
+.markdown tr:nth-child(even) {
+  @apply bg-gray-50;
 } 
