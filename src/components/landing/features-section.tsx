@@ -34,7 +34,7 @@ export function FeaturesSection() {
       <div className="relative flex-1 pt-10 rounded-tl-[2.5rem] rounded-bl-[5rem] rounded-tr-[2.5rem] bg-gradient-to-br to-primary from-secondary">
         <Image
           alt="SaaS Dashboard"
-          src="/landing/Group-996-(1)-1-(1).png"
+          src="/landing/feature1.svg"
           width={600}
           height={400}
         />
