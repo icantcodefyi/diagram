@@ -34,6 +34,11 @@ function verifyWebhookSignature(
 }
 
 async function handleSubscriptionCreated(data: LemonSqueezySubscriptionData) {
+  console.log("Processing subscription_created event:", {
+    email: data.attributes.customer_email,
+    subscription_id: data.attributes.subscription_id,
+  });
+
   const { customer_email, subscription_id, ends_at } = data.attributes;
   const user = await db.user.findUnique({
     where: { email: customer_email },
@@ -45,68 +50,106 @@ async function handleSubscriptionCreated(data: LemonSqueezySubscriptionData) {
     return;
   }
 
-  // Create or update subscription
-  await db.$transaction(async (tx) => {
-    await tx.subscription.upsert({
-      where: { lemonSqueezyId: subscription_id },
-      create: {
-        userId: user.id,
-        lemonSqueezyId: subscription_id,
-        status: "active",
-        currentPeriodEnd: new Date(ends_at),
-      },
-      update: {
-        status: "active",
-        currentPeriodEnd: new Date(ends_at),
-      },
+  console.log("Found user:", {
+    userId: user.id,
+    currentCredits: user.credits?.credits,
+  });
+
+  try {
+    // Create or update subscription
+    await db.$transaction(async (tx) => {
+      // Create subscription
+      const subscription = await tx.subscription.upsert({
+        where: { lemonSqueezyId: subscription_id },
+        create: {
+          userId: user.id,
+          lemonSqueezyId: subscription_id,
+          status: "active",
+          currentPeriodEnd: new Date(ends_at),
+        },
+        update: {
+          status: "active",
+          currentPeriodEnd: new Date(ends_at),
+        },
+      });
+
+      console.log("Created/Updated subscription:", subscription);
+
+      // Add monthly credits
+      if (user.credits) {
+        const updatedCredits = await tx.userCredits.update({
+          where: { userId: user.id },
+          data: {
+            credits: user.credits.credits + MONTHLY_CREDITS,
+            monthlyCredits: MONTHLY_CREDITS,
+            lastMonthlyReset: new Date(),
+          },
+        });
+        console.log("Updated credits:", updatedCredits);
+      } else {
+        const newCredits = await tx.userCredits.create({
+          data: {
+            userId: user.id,
+            credits: MONTHLY_CREDITS,
+            monthlyCredits: MONTHLY_CREDITS,
+            lastMonthlyReset: new Date(),
+          },
+        });
+        console.log("Created new credits:", newCredits);
+      }
     });
 
-    // Add monthly credits
-    if (user.credits) {
-      await tx.userCredits.update({
-        where: { userId: user.id },
-        data: {
-          credits: user.credits.credits + MONTHLY_CREDITS,
-          monthlyCredits: MONTHLY_CREDITS,
-          lastMonthlyReset: new Date(),
-        },
-      });
-    } else {
-      await tx.userCredits.create({
-        data: {
-          userId: user.id,
-          credits: MONTHLY_CREDITS,
-          monthlyCredits: MONTHLY_CREDITS,
-          lastMonthlyReset: new Date(),
-        },
-      });
-    }
-  });
+    console.log("Successfully processed subscription creation");
+  } catch (error) {
+    console.error("Error in subscription creation:", error);
+    throw error;
+  }
 }
 
 async function handleSubscriptionUpdated(data: LemonSqueezySubscriptionData) {
+  console.log("Processing subscription_updated event:", {
+    subscription_id: data.attributes.subscription_id,
+    status: data.attributes.status,
+  });
+
   const { subscription_id, status, ends_at } = data.attributes;
 
-  await db.subscription.update({
-    where: { lemonSqueezyId: subscription_id },
-    data: {
-      status,
-      currentPeriodEnd: new Date(ends_at),
-      cancelAtPeriodEnd: status === "cancelled",
-    },
-  });
+  try {
+    const updated = await db.subscription.update({
+      where: { lemonSqueezyId: subscription_id },
+      data: {
+        status,
+        currentPeriodEnd: new Date(ends_at),
+        cancelAtPeriodEnd: status === "cancelled",
+      },
+    });
+    console.log("Updated subscription:", updated);
+  } catch (error) {
+    console.error("Error updating subscription:", error);
+    throw error;
+  }
 }
 
 async function handleSubscriptionCancelled(data: LemonSqueezySubscriptionData) {
+  console.log("Processing subscription_cancelled event:", {
+    subscription_id: data.attributes.subscription_id,
+  });
+
   const { subscription_id } = data.attributes;
 
-  await db.subscription.update({
-    where: { lemonSqueezyId: subscription_id },
-    data: {
-      status: "cancelled",
-      cancelAtPeriodEnd: true,
-    },
-  });
+  try {
+    const cancelled = await db.subscription.update({
+      where: { lemonSqueezyId: subscription_id },
+      data: {
+        status: "cancelled",
+        cancelAtPeriodEnd: true,
+      },
+    });
+    console.log("Cancelled subscription:", cancelled);
+  } catch (error) {
+    console.error("Error cancelling subscription:", error);
+    throw error;
+  }
 }
 
 async function handleSubscriptionResumed(data: LemonSqueezySubscriptionData) {
@@ -160,10 +203,17 @@ async function handleSubscriptionExpired(data: LemonSqueezySubscriptionData) {
 
 export async function POST(req: Request) {
   try {
-    const signature = (await headers()).get("x-signature");
+    const headersList = headers();
+    const signature = headersList.get("x-signature");
     const rawBody = await req.text();
     
+    console.log("Received webhook request", {
+      signature: signature ? "present" : "missing",
+      bodyLength: rawBody.length,
+    });
+
     if (!verifyWebhookSignature(rawBody, signature)) {
+      console.error("Invalid webhook signature");
       return NextResponse.json(
         { error: "Invalid signature" },
         { status: 401 }
@@ -174,7 +224,7 @@ export async function POST(req: Request) {
     const eventName = body.meta.event_name;
     const data = body.data;
 
-    console.log("Received webhook event:", eventName);
+    console.log("Processing webhook event:", eventName);
 
     switch (eventName) {
       case "subscription_created":
@@ -196,6 +246,7 @@ export async function POST(req: Request) {
         console.log("Unhandled event type:", eventName);
     }
 
+    console.log("Successfully processed webhook event:", eventName);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Webhook error:", error);
