@@ -25,6 +25,7 @@ export function Header() {
       <Logo />
       <div className="flex items-center gap-10">
         <nav className="hidden items-center gap-10 md:flex justify-end">
+          <NavItem href="/generate" label="Generate" cta={true} />
           <NavItem href="/about" label="About" />
           <NavItem href="/blog" label="Blog" />
           <NavItem href="/pricing" label="Pricing" />
@@ -48,6 +49,7 @@ export function Header() {
       <MobileNavbar>
         <div className="rounded-b-lg bg-background py-4 container text-foreground shadow-xl">
           <nav className="flex flex-col gap-1 pt-2">
+            <MobileNavItem href="/generate" label="Generate" />
             <MobileNavItem href="/about" label="About" />
             <MobileNavItem href="/blog" label="Blog" />
             <MobileNavItem href="/pricing" label="Pricing" />
