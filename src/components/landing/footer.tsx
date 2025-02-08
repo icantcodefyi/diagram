@@ -42,43 +42,43 @@ export function Footer() {
       </div>
       <div className="mt-10 flex basis-1/2 flex-col gap-5 md:mt-0 md:basis-auto">
         <h3 className="font-semibold">Product</h3>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/features" className="text-sm text-muted-foreground hover:text-foreground">
           Features
         </Link>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/integrations" className="text-sm text-muted-foreground hover:text-foreground">
           Integrations
         </Link>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground">
           Pricing
         </Link>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/blog" className="text-sm text-muted-foreground hover:text-foreground">
           Changelog
         </Link>
       </div>
       <div className="mt-10 flex basis-1/2 flex-col gap-5 md:mt-0 md:basis-auto">
         <h3 className="font-semibold">Resources</h3>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/contact" className="text-sm text-muted-foreground hover:text-foreground">
           Contact
         </Link>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground">
           Privacy Policy
         </Link>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground">
           Terms of service
         </Link>
       </div>
       <div className="mt-10 flex basis-1/2 flex-col gap-5 md:mt-0 md:basis-auto">
         <h3 className="font-semibold">Company</h3>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/about" className="text-sm text-muted-foreground hover:text-foreground">
           About us
         </Link>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/blog" className="text-sm text-muted-foreground hover:text-foreground">
           Blog
         </Link>
       </div>
       <div className="mt-10 flex basis-1/2 flex-col gap-5 md:mt-0 md:basis-auto">
         <h3 className="font-semibold">Developers</h3>
-        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
+        <Link href="/coming-soon" className="text-sm text-muted-foreground hover:text-foreground">
           Coming Soon
         </Link>
       </div>

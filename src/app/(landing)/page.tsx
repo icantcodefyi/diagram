@@ -4,6 +4,7 @@ import { FeaturesSection2 } from "@/components/landing/features-section2";
 import { Faq } from "@/components/landing/faq";
 import { CtaSection } from "@/components/landing/cta-section";
 import { Pricing } from "@/components/landing/pricing";
+import { FeaturesSection3 } from "@/components/landing/features-section3";
 
 export default function LandingPage() {
   return (
@@ -11,6 +12,7 @@ export default function LandingPage() {
       <Hero />
       <FeaturesSection />
       <FeaturesSection2 />
+      <FeaturesSection3 />
       <Faq />
       <Pricing />
       <CtaSection />
