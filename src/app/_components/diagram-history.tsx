@@ -48,7 +48,7 @@ export function DiagramHistory() {
 
   const handleDiagramUpdate = async (newContent: string) => {
     if (selectedDiagram) {
-      await updateDiagram.mutate({
+      updateDiagram.mutate({
         id: selectedDiagram.id,
         content: newContent,
       });
