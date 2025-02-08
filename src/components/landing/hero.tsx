@@ -3,7 +3,7 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 import { SocialProofLogo } from "@/components/landing/social-proof-logo";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 
 export function Hero() {
   const [inputText, setInputText] = useState("");
+  const videoRef = useRef<HTMLVideoElement>(null);
   const router = useRouter();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -20,6 +21,19 @@ export function Hero() {
       // Encode the input text for URL safety
       const encodedText = encodeURIComponent(inputText);
       router.push(`/generate?text=${encodedText}`);
+    }
+  };
+
+  const handleMouseEnter = () => {
+    if (videoRef.current) {
+      void videoRef.current.play();
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
     }
   };
 
@@ -72,9 +86,11 @@ export function Hero() {
           animate={{ y: 0.4, opacity: 1 }}
           initial={{ y: 10, opacity: 0 }}
           transition={{ delay: 0.6, duration: 0.4 }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
         >
           <video
-            autoPlay
+            ref={videoRef}
             muted
             loop
             playsInline

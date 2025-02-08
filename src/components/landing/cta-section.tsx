@@ -23,7 +23,7 @@ export function CtaSection() {
         </Button>
         <Image
           alt="SaaS Dashboard"
-          src="/landing/Group-999-(1).png"
+          src="/landing/cta.png"
           width={900}
           height={698}
           priority
