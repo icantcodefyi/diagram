@@ -9,9 +9,12 @@ import { useDiagramStore } from "@/store/diagram-store";
 import type { Diagram } from "@/store/diagram-store";
 import { DiagramPreviewCard } from "@/app/_components/diagram-preview-card";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ArrowLeft, Crown, LayoutGrid } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface DbDiagram {
   id: string;
@@ -51,6 +54,10 @@ export default function SettingsPage() {
       enabled: !!session,
     });
 
+  const { data: subscription } = api.ai.getUserSubscription.useQuery(undefined, {
+    enabled: !!session,
+  });
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/");
@@ -74,9 +81,10 @@ export default function SettingsPage() {
 
   if (status === "loading" || diagramsLoading || creditsLoading) {
     return (
-      <div className="mx-auto max-w-5xl space-y-4 p-4">
+      <div className="mx-auto max-w-3xl space-y-4 p-4">
         <Skeleton className="h-8 w-32" />
-        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-[400px] w-full" />
+        <Skeleton className="h-8 w-48" />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-48 w-full" />
@@ -90,95 +98,169 @@ export default function SettingsPage() {
     return null;
   }
 
+  const isPro = subscription?.status === "active";
+  const totalDiagrams = diagrams?.length ?? 0;
+  const complexDiagrams = diagrams?.filter(d => d.isComplex).length ?? 0;
+
   return (
-    <div className="mx-auto max-w-5xl p-4">
-      <div className="mb-8">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+      <div className="mx-auto max-w-3xl p-4">
         <Button
-          variant="link"
+          variant="ghost"
           onClick={() => router.push("/generate")}
+          className="mb-8 gap-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back
+          Back to Generator
         </Button>
-      </div>
 
-      <div className="space-y-8 px-8">
-        <h1 className="text-2xl font-medium">Settings</h1>
-        <section>
-          <h2 className="mb-4 text-lg font-medium">Profile</h2>
-          <Card className="p-4 sm:p-6">
-            <div className="space-y-6 sm:space-y-8">
-              {/* User Info Section */}
-              <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 sm:gap-6">
-                <div className="space-y-2 text-center sm:text-left">
-                  <div className="flex flex-col sm:flex-row items-center gap-3">
-                    {session.user?.image && (
-                      <img
-                        src={session.user.image}
-                        alt="Profile"
-                        className="h-16 w-16 sm:h-12 sm:w-12 rounded-full border-2 border-border"
-                      />
+        <Card>
+          <CardHeader>
+            <CardTitle>Account Settings</CardTitle>
+            <CardDescription>
+              Manage your account and preferences
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            {/* Profile Section */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={session.user?.image ?? ''} alt={session.user?.name ?? 'User'} />
+                  <AvatarFallback>{session.user?.name?.[0] ?? 'U'}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-medium">
+                      {session.user?.name ?? 'User'}
+                    </h2>
+                    {isPro && (
+                      <Badge variant="secondary" className="gap-1">
+                        <Crown className="h-3 w-3 text-accent" />
+                        PRO
+                      </Badge>
                     )}
-                    <div>
-                      <h3 className="text-xl sm:text-lg font-medium">{session.user?.name ?? 'User'}</h3>
-                      <p className="text-sm text-muted-foreground">{session.user?.email}</p>
-                    </div>
                   </div>
+                  <p className="text-sm text-muted-foreground">{session.user?.email}</p>
                 </div>
-                <Button
-                  variant="destructive"
-                  onClick={() => void signOut({ callbackUrl: "/" })}
-                  className="w-[100px] sm:w-[100px] border-[1px] dark:border-[2px] border-black/10 dark:border-neutral-950 bg-gradient-to-b from-red-300/90 to-red-500 dark:from-red-300/90 dark:to-red-500 p-[1px] transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <div className="w-full h-full flex items-center justify-center gap-2 bg-gradient-to-b from-red-400/60 to-red-500/60 text-sm text-white/90 transition duration-300 ease-in-out hover:bg-gradient-to-b hover:from-red-400/70 hover:to-red-600/70 dark:hover:from-red-400/70 dark:hover:to-red-500/80 active:bg-gradient-to-b active:from-red-400/80 active:to-red-600/80 dark:active:from-red-400 dark:active:to-red-500 disabled:hover:from-red-400 disabled:hover:to-red-500 px-4 py-2 rounded-[10px]">
-                    Sign Out
-                  </div>
-                </Button>
               </div>
+              <Button
+                variant="destructive"
+                onClick={() => void signOut({ callbackUrl: "/" })}
+                size="sm"
+              >
+                Sign Out
+              </Button>
+            </div>
 
-              {/* Divider */}
-              <div className="h-px bg-border" />
+            <Separator />
 
-              {/* Credits Section */}
-              <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-4 sm:gap-6">
-                <div className="space-y-2 text-center sm:text-left">
-                  <p className="text-3xl font-semibold">{credits?.credits ?? 0}</p>
-                  <p className="text-sm text-muted-foreground">Available Credits</p>
+            {/* Plan Info */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <h3 className="font-medium">{isPro ? 'Pro Plan' : 'Free Plan'}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {isPro 
+                    ? `Active until ${subscription.currentPeriodEnd.toLocaleDateString()}`
+                    : 'Limited features and credits'}
+                </p>
+              </div>
+              {!isPro && (
+                <Button
+                  onClick={() => router.push("/#pricing")}
+                  className="gap-1"
+                >
+                  <Crown className="h-4 w-4" />
+                  Upgrade
+                </Button>
+              )}
+            </div>
+
+            {/* Credits & Usage Stats */}
+            <Card className="bg-muted/50">
+              <CardContent className="space-y-4 pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-2xl font-semibold">{credits?.credits ?? 0}</p>
+                    <p className="text-sm text-muted-foreground">Available Credits</p>
+                  </div>
+                  <Badge variant={isPro ? "secondary" : "outline"} className="h-fit gap-1 py-1">
+                    {isPro ? (
+                      <>
+                        <Crown className="h-3 w-3 text-accent" />
+                        500 Monthly + 10 Daily
+                      </>
+                    ) : (
+                      "10 Daily"
+                    )}
+                  </Badge>
                 </div>
-                <div className="text-center sm:text-right">
-                  <div className="inline-block px-4 py-3 bg-muted/50 rounded-lg">
-                    <p className="text-sm space-y-1">
-                      <span className="block text-muted-foreground">Simple: <span className="text-foreground font-medium">1 credit</span></span>
-                      <span className="block text-muted-foreground">Complex: <span className="text-foreground font-medium">2 credits</span></span>
-                      <span className="block text-xs text-muted-foreground/80 mt-2">Resets daily</span>
-                    </p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-lg font-medium">{totalDiagrams}</p>
+                    <p className="text-sm text-muted-foreground">Total Diagrams</p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-medium">{complexDiagrams}</p>
+                    <p className="text-sm text-muted-foreground">Complex Diagrams</p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </CardContent>
+
+          <CardFooter>
+            <div className="w-full space-y-1.5 text-sm text-muted-foreground">
+              <div className="flex justify-between">
+                <span>Simple Diagram</span>
+                <span className="font-medium">1 credit</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Complex Diagram</span>
+                <span className="font-medium">2 credits</span>
               </div>
             </div>
-          </Card>
-        </section>
+          </CardFooter>
+        </Card>
 
-        <section>
-          <h2 className="mb-4 text-lg font-medium">Your Diagrams</h2>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {diagrams && diagrams.length > 0 ? (
-              diagrams.map((diagram: DbDiagram) => (
-                <DiagramPreviewCard
-                  key={diagram.id}
-                  diagram={convertDbDiagramToStoreDiagram(diagram)}
-                />
-              ))
-            ) : (
-              <Card className="col-span-full p-6 text-center">
-                <p className="mb-4 text-gray-500">No diagrams yet</p>
-                <Button onClick={() => router.push("/")}>
-                  Create Your First Diagram
-                </Button>
-              </Card>
-            )}
-          </div>
-        </section>
+        {/* Recent Diagrams Section */}
+        <Card className="mt-8 border-none shadow-none">
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <div className="flex items-center gap-2">
+              <LayoutGrid className="h-5 w-5 text-primary" />
+              <CardTitle>Recent Diagrams</CardTitle>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => router.push("/generate")}
+            >
+              Create New
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {diagrams && diagrams.length > 0 ? (
+                diagrams.slice(0, 6).map((diagram: DbDiagram) => (
+                  <DiagramPreviewCard
+                    key={diagram.id}
+                    diagram={convertDbDiagramToStoreDiagram(diagram)}
+                  />
+                ))
+              ) : (
+                <Card className="col-span-full p-6 text-center">
+                  <CardContent className="pt-6">
+                    <p className="mb-4 text-muted-foreground">No diagrams yet</p>
+                    <Button onClick={() => router.push("/generate")}>
+                      Create Your First Diagram
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
