@@ -145,10 +145,16 @@ Respond in this exact JSON format:
         }
 
         try {
-          const cleanText = responseText
-            .replace(/^```json\n|\n```$/g, "")
-            .trim();
+          // More robust JSON extraction and cleaning
+          const jsonRegex = /\{[\s\S]*\}/;
+          const jsonMatch = jsonRegex.exec(responseText);
+          if (!jsonMatch) {
+            throw new Error("No JSON object found in response");
+          }
+          
+          const cleanText = jsonMatch[0].trim();
           const parsed = JSON.parse(cleanText) as DiagramTypeResponse;
+          
           if (
             parsed.type &&
             typeof parsed.type === "string" &&
