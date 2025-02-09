@@ -2,6 +2,8 @@ import { TextQuote, LineChart } from "lucide-react";
 import Image from "next/image";
 
 import { FeatureItem } from "@/components/landing/feature-item";
+import { DiagramTypesSlider } from "./diagram-types-slider";
+import { DIAGRAM_TYPES } from "@/types/diagram-types";
 
 export function FeaturesSection3() {
   return (
@@ -32,7 +34,7 @@ export function FeaturesSection3() {
         </div>
       </div>
       <div className="relative flex-1 pt-10 rounded-tl-[2.5rem] rounded-bl-[5rem] rounded-tr-[2.5rem] bg-gradient-to-br to-primary from-secondary">
-        <Image alt="SaaS Dashboard" src="/landing/Group-998-1-(1).png" width={600} height={400} />
+      <DiagramTypesSlider diagrams={DIAGRAM_TYPES} />
       </div>
     </section>
   );

@@ -306,7 +306,7 @@ export function DiagramGeneratorForm({
                             id="complex-mode"
                             checked={isComplex}
                             onCheckedChange={setIsComplex}
-                            disabled={true}
+                            disabled={isLoading}
                           />
                           <Label
                             htmlFor="complex-mode"
@@ -323,6 +323,7 @@ export function DiagramGeneratorForm({
                   </TooltipProvider>
                 </div>
                 <div className="flex items-center gap-2">
+                {isComplex && <span className="text-xs text-muted-foreground">(Uses 2 credits)</span>}
                   <Badge variant="outline" className="text-xs">
                     <AnimatedCounter 
                       value={credits}
@@ -330,7 +331,6 @@ export function DiagramGeneratorForm({
                     />
                     {!session?.user && " (Anonymous)"}
                   </Badge>
-                  {isComplex && <span className="text-xs text-muted-foreground">(Uses 2 credits)</span>}
                 </div>
               </div>
             </div>
