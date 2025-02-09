@@ -4,7 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { PricingFeatureItem } from "./pricing-feature-item";
 import { cn } from "@/lib/utils";
-import { LoginDialog } from "@/app/_components/login-dialog";
+import { LoginDialog } from "@/components/landing/login-dialog";
 import { useState } from "react";
 import { createCheckout } from "@/app/actions/checkout";
 import { useSession } from "next-auth/react";
