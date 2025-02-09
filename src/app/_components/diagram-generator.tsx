@@ -36,9 +36,9 @@ export function DiagramGenerator() {
       </div>
 
       {diagram && !error && (
-        <DiagramPreview 
-          diagram={diagram} 
-          diagramType={diagramType} 
+        <DiagramPreview
+          diagram={diagram}
+          diagramType={diagramType}
           onUpdate={handleDiagramUpdate}
         />
       )}
