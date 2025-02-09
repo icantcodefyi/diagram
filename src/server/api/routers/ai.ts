@@ -44,20 +44,23 @@ export const aiRouter = createTRPCRouter({
         let validDiagram = "";
         let lastError: Error | null = null;
 
-        // Use AI to determine the most suitable diagram type
-        const suggestedType = await determineDiagramType(input.text);
+        // Use AI to determine the most suitable diagram type and validate input
+        const diagramTypeResult = await determineDiagramType(input.text);
 
-        if (!suggestedType) {
+        if (!diagramTypeResult.isValid) {
           throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to determine diagram type",
+            code: "BAD_REQUEST",
+            message: diagramTypeResult.error ?? "Invalid input for diagram generation",
           });
         }
+
+        const suggestedType = diagramTypeResult.type;
+        const enhancedText = diagramTypeResult.enhancedText;
 
         while (attempts < maxAttempts) {
           try {
             const mermaidCode = await generateDiagramWithAI(
-              input.text,
+              enhancedText ?? input.text, // Use enhanced text if available
               suggestedType,
               attempts,
               input.isComplex,
@@ -118,6 +121,7 @@ export const aiRouter = createTRPCRouter({
           type: suggestedType,
           message: `Successfully generated a ${suggestedType} diagram.`,
           storedDiagram: diagram,
+          enhancedText: enhancedText,
         };
       } catch (error) {
         if (error instanceof TRPCError) {

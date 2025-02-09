@@ -11,6 +11,7 @@ import { AuthButton } from "@/app/_components/auth-button";
 export function DiagramGenerator() {
   const [diagram, setDiagram] = useState("");
   const [diagramType, setDiagramType] = useState<DiagramType | null>(null);
+  const [enhancedText, setEnhancedText] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
 
@@ -22,9 +23,10 @@ export function DiagramGenerator() {
     <div className="container max-w-4xl space-y-6 py-6">
       <div className="relative">
         <DiagramGeneratorForm
-          onDiagramGenerated={(newDiagram, type) => {
+          onDiagramGenerated={(newDiagram, type, newEnhancedText) => {
             setDiagram(newDiagram);
             setDiagramType(type);
+            setEnhancedText(newEnhancedText ?? null);
             setError(null);
           }}
           onError={setError}
@@ -36,11 +38,19 @@ export function DiagramGenerator() {
       </div>
 
       {diagram && !error && (
-        <DiagramPreview 
-          diagram={diagram} 
-          diagramType={diagramType} 
-          onUpdate={handleDiagramUpdate}
-        />
+        <>
+          {enhancedText && (
+            <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
+              <p className="font-medium">AI&apos;s Understanding:</p>
+              <p className="mt-1">{enhancedText}</p>
+            </div>
+          )}
+          <DiagramPreview 
+            diagram={diagram} 
+            diagramType={diagramType} 
+            onUpdate={handleDiagramUpdate}
+          />
+        </>
       )}
 
       <LoginDialog

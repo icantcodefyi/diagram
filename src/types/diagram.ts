@@ -17,7 +17,6 @@ export const DIAGRAM_TYPES = {
   zenuml: "UML sequence diagrams with a more natural syntax",
   sankey: "Flow quantities, data transfers, and resource distributions",
   xy: "Scatter plots, line graphs, and data correlations",
-  block: "System components, architecture diagrams, and module relationships",
   packet: "Network packets, protocol flows, and data transmission",
   kanban: "Project management, task organization, and workflow status",
   architecture: "System architecture, component relationships, and infrastructure"
@@ -44,7 +43,6 @@ export const EXAMPLE_SUGGESTIONS: Record<DiagramType, string> = {
   zenuml: "Describe the login sequence with detailed interactions",
   sankey: "Show data flow between system components",
   xy: "Plot user engagement over time",
-  block: "Design the system architecture components",
   packet: "Illustrate the network protocol flow",
   kanban: "Organize development tasks by status",
   architecture: "Design the overall system infrastructure"

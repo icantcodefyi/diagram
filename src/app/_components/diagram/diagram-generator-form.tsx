@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/tooltip";
 
 interface DiagramGeneratorFormProps {
-  onDiagramGenerated: (diagram: string, type: DiagramType) => void;
+  onDiagramGenerated: (diagram: string, type: DiagramType, enhancedText?: string) => void;
   onError: (error: string | null) => void;
   onShowLogin: () => void;
 }
@@ -96,7 +96,7 @@ export function DiagramGeneratorForm({
         // Render the new diagram
         await renderMermaidDiagram(data.diagram, "#mermaid-diagram");
 
-        onDiagramGenerated(data.diagram, data.type);
+        onDiagramGenerated(data.diagram, data.type, data.enhancedText);
 
         // Update anonymous credits if not logged in
         if (!session?.user && anonymousCredits !== null) {
@@ -120,28 +120,52 @@ export function DiagramGeneratorForm({
       }
     },
     onError: (err) => {
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : "Failed to generate diagram. Please try again with a different description.";
-      onError(errorMessage);
-
-      if (err instanceof Error && err.message.includes("Insufficient credits")) {
-        toast({
-          title: "Out of Credits",
-          description: session?.user 
-            ? "You've used all your credits for today. Credits will reset tomorrow!"
-            : "You've used all your anonymous credits. Sign up to get more credits!",
-          variant: "destructive",
-          duration: 5000,
-          className: "rounded",
-          action: !session?.user ? (
-            <Button variant="secondary" size="sm" onClick={onShowLogin}>
-              Sign Up
-            </Button>
-          ) : undefined,
-        });
+      if (err instanceof Error) {
+        // Handle validation errors specifically
+        if (err.message.includes("Invalid input")) {
+          onError("Your input doesn't contain enough information to generate a meaningful diagram. Please provide more details about what you want to visualize.");
+          toast({
+            title: "Invalid Input",
+            description: "Please provide more detailed information about what you want to visualize.",
+            variant: "destructive",
+            duration: 5000,
+            className: "rounded",
+          });
+          return;
+        }
+        
+        // Handle credit-related errors
+        if (err.message.includes("Insufficient credits")) {
+          toast({
+            title: "Out of Credits",
+            description: session?.user 
+              ? "You've used all your credits for today. Credits will reset tomorrow!"
+              : "You've used all your anonymous credits. Sign up to get more credits!",
+            variant: "destructive",
+            duration: 5000,
+            className: "rounded",
+            action: !session?.user ? (
+              <Button variant="secondary" size="sm" onClick={onShowLogin}>
+                Sign Up
+              </Button>
+            ) : undefined,
+          });
+          return;
+        }
       }
+
+      // Handle other errors
+      const errorMessage = err instanceof Error
+        ? err.message
+        : "Failed to generate diagram. Please try again with a different description.";
+      onError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+        duration: 5000,
+        className: "rounded",
+      });
     },
   });
 
@@ -282,7 +306,7 @@ export function DiagramGeneratorForm({
                             id="complex-mode"
                             checked={isComplex}
                             onCheckedChange={setIsComplex}
-                            disabled={true}
+                            disabled={isLoading}
                           />
                           <Label
                             htmlFor="complex-mode"
@@ -293,7 +317,7 @@ export function DiagramGeneratorForm({
                         </div>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Coming soon!</p>
+                        <p>impress your professor :3</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
