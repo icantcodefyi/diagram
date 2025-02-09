@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DiagramDownloadButton } from "../diagram-download-button";
+import { DiagramEditor } from "./diagram-editor";
 import { THEMES, type MermaidTheme } from "@/hooks/use-diagram-preview";
 import { cn } from "@/lib/utils";
 import {
@@ -28,6 +29,7 @@ interface DiagramControlsProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onResetZoom: () => void;
+  onContentUpdate?: (newContent: string) => void;
   className?: string;
   isMinZoom?: boolean;
   isMaxZoom?: boolean;
@@ -45,6 +47,7 @@ export function DiagramControls({
   onZoomIn,
   onZoomOut,
   onResetZoom,
+  onContentUpdate,
   className,
   isMinZoom,
   isMaxZoom,
@@ -155,8 +158,16 @@ export function DiagramControls({
             name={name}
             showLabel={showLabel}
           />
+          {onContentUpdate && (
+            <DiagramEditor
+              content={content}
+              diagramId={diagramId}
+              onUpdate={onContentUpdate}
+              showLabel={showLabel}
+            />
+          )}
         </div>
       </div>
     </TooltipProvider>
   );
-} 
+}

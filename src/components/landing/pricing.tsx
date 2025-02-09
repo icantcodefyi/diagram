@@ -26,7 +26,7 @@ export function Pricing() {
         />
         <PricingCard
           name="Pro"
-          price={19}
+          price={9}
           feature1="Unlimited diagrams"
           feature2="All diagram types"
           feature3="SVG & PNG export"
@@ -35,6 +35,7 @@ export function Pricing() {
           description="For professionals and growing teams."
           isMostPopular
           className="border-2 border-primary"
+          variantId={687787}
         />
       </div>
     </section>

@@ -11,18 +11,18 @@ export function FeaturesSection2() {
       <div className="flex flex-1 flex-col items-start gap-10">
         <div className="flex flex-col gap-3">
           <span className="font-bold text-primary text-left italic font-heading">
-            Quick Edit Functionality
+            Professional Export Options
           </span>
           <h2 className="font-heading text-3xl tracking-tight sm:text-4xl text-balance text-left font-bold">
-            Seamless Editing & Export
+            Share & Collaborate Seamlessly
           </h2>
         </div>
         <p className="text-lg text-muted-foreground text-balance max-w-lg text-left">
-          Effortlessly adjust, refine, and export your diagrams in multiple formats for easy sharing and collaboration.
+          Export high-quality diagrams in multiple formats (SVG, PNG, PDF) and collaborate with your team through shareable links.
         </p>
         <div className="flex grid-cols-2 grid gap-4">
-          <StatItem label="Time Saved vs Manual Creation" value="90%" />
-          <StatItem label="Export Options" value="3+" />
+          <StatItem label="Export Format Options" value="3+" />
+          <StatItem label="Time Saved vs Manual Tools" value="90%" />
         </div>
       </div>
     </section>

@@ -46,7 +46,7 @@ export function Hero() {
           transition={{ delay: 0.8, duration: 0.4 }}
           className="flex cursor-pointer items-center gap-1 rounded-full bg-secondary/10 px-4 py-1 font-medium text-secondary hover:bg-secondary/20"
         >
-          <span className="text-sm">Introducing Diagramify</span>
+          <span className="text-sm">Introducing AutoDiagram</span>
         </motion.div>
         <motion.h1
           animate={{ y: 0, opacity: 1 }}

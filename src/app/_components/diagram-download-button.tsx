@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/texturebutton";
-import { Download, ChevronDown } from "lucide-react";
+import { Download } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -187,20 +187,50 @@ export function DiagramDownloadButton({
 
   const handleDownloadSVG = async () => {
     try {
-      // Fix the selector to work with both modal and regular diagrams
-      let element: SVGElement | null;
-      if (diagramId.startsWith("modal-diagram-")) {
-        element = document.querySelector(`#${diagramId} svg`);
-      } else {
-        element = document.querySelector(`#diagram-${diagramId} svg`);
+      // Add a small delay to ensure the SVG is rendered
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Try multiple selectors to find the SVG
+      let svgElement: SVGElement | null = null;
+      const selectors = [
+        `#${diagramId} svg`,
+        `#diagram-${diagramId} svg`,
+        `#${diagramId} .mermaid svg`,
+        `#diagram-${diagramId} .mermaid svg`,
+      ];
+
+      for (const selector of selectors) {
+        svgElement = document.querySelector(selector);
+        if (svgElement) break;
       }
 
-      if (!element) {
-        console.error("SVG element not found with ID:", diagramId);
-        throw new Error("No diagram found");
+      if (!svgElement) {
+        console.error("SVG element not found. Tried selectors:", selectors);
+        console.log("Current diagramId:", diagramId);
+        console.log("Available elements:", document.querySelectorAll("svg"));
+        throw new Error("No diagram found - please try again");
       }
 
-      const svgData = new XMLSerializer().serializeToString(element);
+      // Clone the SVG to avoid modifying the original
+      const svgClone = svgElement.cloneNode(true) as SVGElement;
+
+      // Get the current theme and set background color
+      const currentTheme = getCurrentTheme();
+      const isDarkTheme = ["dark", "forest"].includes(currentTheme);
+      const backgroundColor = isDarkTheme ? "#0f172a" : "#ffffff";
+
+      // Add background that matches the theme
+      const background = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "rect",
+      );
+      background.setAttribute("width", "100%");
+      background.setAttribute("height", "100%");
+      background.setAttribute("fill", backgroundColor);
+      svgClone.insertBefore(background, svgClone.firstChild);
+
+      // Convert to string with proper dimensions
+      const svgData = new XMLSerializer().serializeToString(svgClone);
       const blob = new Blob([svgData], { type: "image/svg+xml" });
       const url = URL.createObjectURL(blob);
 
@@ -247,7 +277,6 @@ export function DiagramDownloadButton({
         <Button variant={variant} size={size} className="gap-2">
           <Download className="mr-2 h-4 w-4" />
           {showLabel && "Download"}
-          <ChevronDown className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

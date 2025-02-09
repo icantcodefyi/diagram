@@ -133,23 +133,26 @@ export const aiRouter = createTRPCRouter({
       }
     }),
 
-  getUserDiagrams: protectedProcedure.query(async ({ ctx }) => {
-    return db.diagram.findMany({
-      where: {
-        userId: ctx.session.user.id,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
+  getUserCredits: protectedProcedure.query(async ({ ctx }) => {
+    const userCredits = await ctx.db.userCredits.findUnique({
+      where: { userId: ctx.session.user.id },
     });
+    return userCredits;
   }),
 
-  getUserCredits: protectedProcedure.query(async ({ ctx }) => {
-    return db.userCredits.findUnique({
-      where: {
-        userId: ctx.session.user.id,
-      },
+  getUserSubscription: protectedProcedure.query(async ({ ctx }) => {
+    const subscription = await ctx.db.subscription.findUnique({
+      where: { userId: ctx.session.user.id },
     });
+    return subscription;
+  }),
+
+  getUserDiagrams: protectedProcedure.query(async ({ ctx }) => {
+    const diagrams = await ctx.db.diagram.findMany({
+      where: { userId: ctx.session.user.id },
+      orderBy: { createdAt: "desc" },
+    });
+    return diagrams;
   }),
 
   deleteDiagram: protectedProcedure

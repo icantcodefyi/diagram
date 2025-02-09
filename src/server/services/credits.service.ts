@@ -1,8 +1,15 @@
 import { TRPCError } from "@trpc/server";
 import { db } from "@/server/db";
+import type { User, UserCredits, Subscription } from "@prisma/client";
 
 const INITIAL_CREDITS = 10;
 const DAILY_CREDITS = 10;
+const MONTHLY_CREDITS = 500;
+
+interface UserWithRelations extends User {
+  credits: UserCredits | null;
+  subscription: Subscription | null;
+}
 
 export async function validateAndUpdateUserCredits(
   userId: string | undefined,
@@ -45,13 +52,25 @@ async function validateAnonymousCredits(anonymousId: string | undefined): Promis
 }
 
 async function validateUserCredits(userId: string, requiredCredits: number): Promise<void> {
-  const userCredits = await db.userCredits.findUnique({
-    where: { userId },
-  });
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    include: { 
+      credits: true,
+      subscription: true,
+    },
+  }) as UserWithRelations | null;
+
+  if (!user) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "User not found",
+    });
+  }
 
   const now = new Date();
 
-  if (!userCredits) {
+  // Handle first-time users
+  if (!user.credits) {
     if (requiredCredits > INITIAL_CREDITS) {
       throw new TRPCError({
         code: "FORBIDDEN",
@@ -69,8 +88,30 @@ async function validateUserCredits(userId: string, requiredCredits: number): Pro
     return;
   }
 
-  // Check if credits need to be reset
-  if (userCredits.lastCreditReset.getDate() !== now.getDate()) {
+  // Check if daily credits need to be reset
+  if (user.credits.lastCreditReset.getDate() !== now.getDate()) {
+    // For pro users, also check monthly credits reset
+    if (user.subscription?.status === "active") {
+      const shouldResetMonthly = !user.credits.lastMonthlyReset || 
+        user.credits.lastMonthlyReset.getMonth() !== now.getMonth();
+
+      await db.userCredits.update({
+        where: { userId },
+        data: {
+          credits: shouldResetMonthly 
+            ? MONTHLY_CREDITS + DAILY_CREDITS - requiredCredits
+            : user.credits.credits + DAILY_CREDITS - requiredCredits,
+          lastCreditReset: now,
+          ...(shouldResetMonthly && {
+            monthlyCredits: MONTHLY_CREDITS,
+            lastMonthlyReset: now,
+          }),
+        },
+      });
+      return;
+    }
+
+    // For regular users
     if (requiredCredits > DAILY_CREDITS) {
       throw new TRPCError({
         code: "FORBIDDEN",
@@ -89,7 +130,7 @@ async function validateUserCredits(userId: string, requiredCredits: number): Pro
   }
 
   // Check if user has enough credits
-  if (userCredits.credits < requiredCredits) {
+  if (user.credits.credits < requiredCredits) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Insufficient credits",
@@ -100,7 +141,7 @@ async function validateUserCredits(userId: string, requiredCredits: number): Pro
   await db.userCredits.update({
     where: { userId },
     data: {
-      credits: userCredits.credits - requiredCredits,
+      credits: user.credits.credits - requiredCredits,
     },
   });
 }

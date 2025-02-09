@@ -21,12 +21,19 @@ import { DiagramPreviewModal } from "@/app/_components/diagram/diagram-preview-m
 
 export function DiagramHistory() {
   const { data: session } = useSession();
+  const utils = api.useContext();
   const { data: diagrams, isLoading } = api.diagram.getUserDiagrams.useQuery(
     undefined,
     {
       enabled: !!session?.user,
     },
   );
+  const updateDiagram = api.diagram.update.useMutation({
+    onSuccess: () => {
+      // Refetch diagrams after update
+      void utils.diagram.getUserDiagrams.invalidate();
+    },
+  });
   const [selectedDiagram, setSelectedDiagram] = useState<Diagram | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -36,6 +43,20 @@ export function DiagramHistory() {
   const handleHistoryClick = () => {
     if (!session?.user) {
       setShowLoginDialog(true);
+    }
+  };
+
+  const handleDiagramUpdate = async (newContent: string) => {
+    if (selectedDiagram) {
+      updateDiagram.mutate({
+        id: selectedDiagram.id,
+        content: newContent,
+      });
+      // Update the selected diagram locally
+      setSelectedDiagram({
+        ...selectedDiagram,
+        content: newContent,
+      });
     }
   };
 
@@ -117,6 +138,7 @@ export function DiagramHistory() {
           onOpenChange={setIsDrawerOpen}
           selectedDiagram={selectedDiagram}
           onClose={() => setSelectedDiagram(null)}
+          onUpdate={handleDiagramUpdate}
         >
           {renderHistoryContent()}
         </MobileHistoryView>
@@ -124,6 +146,7 @@ export function DiagramHistory() {
         <DesktopHistoryView
           selectedDiagram={selectedDiagram}
           onClose={() => setSelectedDiagram(null)}
+          onUpdate={handleDiagramUpdate}
         >
           {renderHistoryContent()}
         </DesktopHistoryView>
@@ -158,6 +181,7 @@ interface MobileHistoryViewProps {
   onOpenChange: (open: boolean) => void;
   selectedDiagram: Diagram | null;
   onClose: () => void;
+  onUpdate: (newContent: string) => void;
 }
 
 function MobileHistoryView({
@@ -166,6 +190,7 @@ function MobileHistoryView({
   onOpenChange,
   selectedDiagram,
   onClose,
+  onUpdate,
 }: MobileHistoryViewProps) {
   return (
     <>
@@ -182,6 +207,7 @@ function MobileHistoryView({
           diagram={selectedDiagram}
           isOpen={!!selectedDiagram}
           onClose={onClose}
+          onUpdate={onUpdate}
         />
       )}
     </>
@@ -192,12 +218,14 @@ interface DesktopHistoryViewProps {
   children: React.ReactNode;
   selectedDiagram: Diagram | null;
   onClose: () => void;
+  onUpdate: (newContent: string) => void;
 }
 
 function DesktopHistoryView({
   children,
   selectedDiagram,
   onClose,
+  onUpdate,
 }: DesktopHistoryViewProps) {
   return (
     <div className="fixed left-0 top-0 z-50 w-[300px]">
@@ -207,6 +235,7 @@ function DesktopHistoryView({
           diagram={selectedDiagram}
           isOpen={!!selectedDiagram}
           onClose={onClose}
+          onUpdate={onUpdate}
         />
       )}
     </div>

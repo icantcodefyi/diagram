@@ -20,13 +20,14 @@ const fontHeading = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
-  title: "Diagramify",
+  title: "AutoDiagram",
   description: "Generate beautiful diagrams instantly using AI. Transform your ideas into clear, professional diagrams with natural language.",
-  metadataBase: new URL('https://diagram.ani.ink'),
+  metadataBase: new URL('https://www.autodiagram.com/'),
   authors: [{ name: "Ani" }],
-  keywords: ["diagram generator", "AI diagrams", "flowchart maker", "sequence diagram", "UML diagrams", "mermaid diagrams"],
+  keywords: ["diagram generator", "AI diagrams", "flowchart maker", "sequence diagram", "UML diagrams", "mermaid diagrams", "automatic diagram generation", "AI-powered diagrams", "visual documentation", "diagram creation tool"],
   creator: "Ani",
-  publisher: "Diagramify",
+  publisher: "AutoDiagram",
+  category: "Technology",
   robots: {
     index: true,
     follow: true,
@@ -38,25 +39,29 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://diagram.ani.ink",
-    title: "Diagramify by Ani",
+    url: "https://www.autodiagram.com/",
+    title: "AutoDiagram",
     description: "Generate beautiful diagrams instantly using AI. Transform your ideas into clear, professional diagrams with natural language.",
-    siteName: "Diagramify",
+    siteName: "AutoDiagram",
     images: [
       {
-        url: "/og-image.png",
+        url: "/blog/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Diagramify - AI Powered Diagram Generator",
+        alt: "AutoDiagram - AI Powered Diagram Generator",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Diagramify by Ani",
+    title: "AutoDiagram",
     description: "Generate beautiful diagrams instantly using AI. Transform your ideas into clear, professional diagrams with natural language.",
-    images: ["/og-image.png"],
+    images: ["/blog/og-image.png"],
     creator: "@ani",
+    site: "@autodiagram",
+  },
+  alternates: {
+    canonical: "https://www.autodiagram.com",
   },
   icons: [
     { rel: "icon", url: "/favicon.ico" },

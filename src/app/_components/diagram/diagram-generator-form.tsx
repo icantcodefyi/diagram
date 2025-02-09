@@ -15,7 +15,7 @@ import {
 } from "@/types/diagram";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { getAnonymousUser, updateAnonymousCredits } from "@/lib/anonymous-user";
+import { Badge } from "@/components/ui/badge";
 import { renderMermaidDiagram } from "@/lib/mermaid-config";
 import {
   Dialog,
@@ -25,6 +25,14 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { AnimatedCounter } from "@/components/ui/animated-counter";
+import { getAnonymousUser, updateAnonymousCredits } from "@/lib/anonymous-user";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DiagramGeneratorFormProps {
   onDiagramGenerated: (diagram: string, type: DiagramType) => void;
@@ -41,10 +49,9 @@ export function DiagramGeneratorForm({
   const [isLoading, setIsLoading] = useState(false);
   const [isComplex, setIsComplex] = useState(false);
   const [showCreditDialog, setShowCreditDialog] = useState(false);
+  const [anonymousCredits, setAnonymousCredits] = useState<number | null>(null);
   const { toast } = useToast();
   const { data: session } = useSession();
-  const anonymousUser = getAnonymousUser();
-  const [anonymousCredits, setAnonymousCredits] = useState(0);
   const hasInitialized = useRef(false);
 
   // Fetch user credits if logged in
@@ -53,9 +60,20 @@ export function DiagramGeneratorForm({
     refetchOnWindowFocus: true,
   });
 
+  // Fetch anonymous user credits if not logged in
   useEffect(() => {
-    setAnonymousCredits(getAnonymousUser().credits);
-  }, []);
+    if (!session?.user) {
+      const fetchAnonymousCredits = async () => {
+        try {
+          const anonUser = await getAnonymousUser();
+          setAnonymousCredits(anonUser.credits);
+        } catch (error) {
+          console.error("Error fetching anonymous credits:", error);
+        }
+      };
+      void fetchAnonymousCredits();
+    }
+  }, [session?.user]);
 
   const generateDiagram = api.ai.generateDiagram.useMutation({
     onMutate: () => {
@@ -78,13 +96,14 @@ export function DiagramGeneratorForm({
         // Render the new diagram
         await renderMermaidDiagram(data.diagram, "#mermaid-diagram");
 
-        // Update anonymous user credits if not logged in
-        if (!session?.user) {
-          const requiredCredits = isComplex ? 2 : 1;
-          updateAnonymousCredits(anonymousUser.credits - requiredCredits);
-        }
-
         onDiagramGenerated(data.diagram, data.type);
+
+        // Update anonymous credits if not logged in
+        if (!session?.user && anonymousCredits !== null) {
+          const newCredits = anonymousCredits - (isComplex ? 2 : 1);
+          await updateAnonymousCredits(newCredits);
+          setAnonymousCredits(newCredits);
+        }
 
         toast({
           title: "Success",
@@ -107,23 +126,42 @@ export function DiagramGeneratorForm({
           : "Failed to generate diagram. Please try again with a different description.";
       onError(errorMessage);
 
-      // Handle credit-related errors
-      if (err instanceof Error) {
-        if (err.message.includes("Please login to generate more diagrams")) {
-          onShowLogin();
-        } else if (err.message.includes("Insufficient credits")) {
-          toast({
-            title: "Out of Credits",
-            description:
-              "You've used all your credits for today. Credits will reset tomorrow!",
-            variant: "destructive",
-            duration: 5000,
-            className: "rounded",
-          });
-        }
+      if (err instanceof Error && err.message.includes("Insufficient credits")) {
+        toast({
+          title: "Out of Credits",
+          description: session?.user 
+            ? "You've used all your credits for today. Credits will reset tomorrow!"
+            : "You've used all your anonymous credits. Sign up to get more credits!",
+          variant: "destructive",
+          duration: 5000,
+          className: "rounded",
+          action: !session?.user ? (
+            <Button variant="secondary" size="sm" onClick={onShowLogin}>
+              Sign Up
+            </Button>
+          ) : undefined,
+        });
       }
     },
   });
+
+  // Add state for anonymous ID
+  const [anonymousId, setAnonymousId] = useState<string | null>(null);
+
+  // Fetch anonymous ID if not logged in
+  useEffect(() => {
+    if (!session?.user) {
+      const fetchAnonymousId = async () => {
+        try {
+          const anonUser = await getAnonymousUser();
+          setAnonymousId(anonUser.id);
+        } catch (error) {
+          console.error("Error fetching anonymous ID:", error);
+        }
+      };
+      void fetchAnonymousId();
+    }
+  }, [session?.user]);
 
   // Handle URL query parameters
   useEffect(() => {
@@ -135,31 +173,37 @@ export function DiagramGeneratorForm({
       setInput(textQuery);
 
       const generateFromQuery = async () => {
-        // Check credits first
-        if (session?.user && userCredits?.credits !== undefined) {
+        const credits = session?.user ? userCredits?.credits : anonymousCredits;
+        if (credits !== undefined && credits !== null) {
           const requiredCredits = isComplex ? 2 : 1;
-          if (userCredits.credits < requiredCredits) {
+          if (credits < requiredCredits) {
             toast({
               title: "Insufficient Credits",
-              description: "You don't have enough credits for this operation.",
+              description: session?.user 
+                ? "You don't have enough credits for this operation."
+                : "Not enough anonymous credits. Sign up to get more credits!",
               variant: "destructive",
               duration: 5000,
               className: "rounded",
+              action: !session?.user ? (
+                <Button variant="secondary" size="sm" onClick={onShowLogin}>
+                  Sign Up
+                </Button>
+              ) : undefined,
             });
             return;
           }
-        } else {
-          const requiredCredits = isComplex ? 2 : 1;
-          if (anonymousUser.credits < requiredCredits) {
-            onShowLogin();
-            return;
-          }
+        }
+
+        if (!session?.user && !anonymousId) {
+          console.error("No anonymous ID available");
+          return;
         }
 
         generateDiagram.mutate({
           text: textQuery,
           isComplex,
-          anonymousId: !session?.user ? anonymousUser.id : undefined,
+          anonymousId: !session?.user ? anonymousId! : undefined,
         });
 
         // Clear the URL query parameter after generation starts
@@ -168,33 +212,17 @@ export function DiagramGeneratorForm({
 
       void generateFromQuery();
     }
-  }, [
-    session?.user,
-    userCredits?.credits,
-    isComplex,
-    anonymousUser.credits,
-    anonymousUser.id,
-    generateDiagram,
-    toast,
-    onShowLogin,
-  ]);
+  }, [session?.user, userCredits?.credits, anonymousCredits, anonymousId, isComplex, generateDiagram, toast, onShowLogin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     onError(null);
 
-    // Check credits based on user type
-    if (session?.user && userCredits?.credits !== undefined) {
+    const credits = session?.user ? userCredits?.credits : anonymousCredits;
+    if (credits !== undefined && credits !== null) {
       const requiredCredits = isComplex ? 2 : 1;
-      if (userCredits.credits < requiredCredits) {
+      if (credits < requiredCredits) {
         setShowCreditDialog(true);
-        return;
-      }
-    } else {
-      // Check anonymous user credits
-      const requiredCredits = isComplex ? 2 : 1;
-      if (anonymousUser.credits < requiredCredits) {
-        onShowLogin();
         return;
       }
     }
@@ -204,10 +232,15 @@ export function DiagramGeneratorForm({
       return;
     }
 
+    if (!session?.user && !anonymousId) {
+      console.error("No anonymous ID available");
+      return;
+    }
+
     generateDiagram.mutate({
       text: input,
       isComplex,
-      anonymousId: !session?.user ? anonymousUser.id : undefined,
+      anonymousId: !session?.user ? anonymousId! : undefined,
     });
   };
 
@@ -215,6 +248,8 @@ export function DiagramGeneratorForm({
     setInput("");
     onError(null);
   };
+
+  const credits = session?.user ? userCredits?.credits : anonymousCredits;
 
   return (
     <>
@@ -239,24 +274,39 @@ export function DiagramGeneratorForm({
               />
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Switch
-                    id="complex-mode"
-                    checked={isComplex}
-                    onCheckedChange={setIsComplex}
-                    disabled={isLoading}
-                  />
-                  <Label
-                    htmlFor="complex-mode"
-                    className="cursor-pointer select-none text-sm text-muted-foreground"
-                  >
-                    Generate detailed and sophisticated diagram
-                  </Label>
+                  <TooltipProvider delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            id="complex-mode"
+                            checked={isComplex}
+                            onCheckedChange={setIsComplex}
+                            disabled={true}
+                          />
+                          <Label
+                            htmlFor="complex-mode"
+                            className="cursor-pointer select-none text-sm text-muted-foreground"
+                          >
+                            Generate detailed and sophisticated diagram
+                          </Label>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Coming soon!</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  {session?.user
-                    ? `Credits: ${userCredits?.credits ?? 0} / 20`
-                    : `Credits: ${anonymousCredits} / 5`}
-                  {isComplex && <span className="ml-1">(Uses 2 credits)</span>}
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    <AnimatedCounter 
+                      value={credits}
+                      className="tabular-nums"
+                    />
+                    {!session?.user && " (Anonymous)"}
+                  </Badge>
+                  {isComplex && <span className="text-xs text-muted-foreground">(Uses 2 credits)</span>}
                 </div>
               </div>
             </div>
@@ -297,18 +347,33 @@ export function DiagramGeneratorForm({
           <DialogHeader>
             <DialogTitle>Need More Credits?</DialogTitle>
             <DialogDescription className="pt-2">
-              You&apos;ve used all your credits for today. Since we&apos;re still in the experimental stage, 
-              you can request more credits by DMing us on Twitter.
+              {session?.user ? (
+                "You've used all your credits for today. Since we're still in the experimental stage, you can request more credits by DMing us on Twitter."
+              ) : (
+                "You've used all your anonymous credits. Sign up to get more credits and unlock additional features!"
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="sm:justify-start">
-            <Button
-              variant="accent"
-              onClick={() => window.open("https://twitter.com/messages/compose?recipient_id=icantcodefyi", "_blank")}
-            >
-              <Twitter className="mr-2 h-4 w-4" />
-              DM on Twitter
-            </Button>
+            {session?.user ? (
+              <Button
+                variant="accent"
+                onClick={() => window.open("https://twitter.com/messages/compose?recipient_id=icantcodefyi", "_blank")}
+              >
+                <Twitter className="mr-2 h-4 w-4" />
+                DM on Twitter
+              </Button>
+            ) : (
+              <Button
+                variant="accent"
+                onClick={() => {
+                  setShowCreditDialog(false);
+                  onShowLogin();
+                }}
+              >
+                Sign Up
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

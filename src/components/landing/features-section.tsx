@@ -9,25 +9,25 @@ export function FeaturesSection() {
       <div className="flex flex-1 flex-col items-start gap-10">
         <div className="flex flex-col gap-3">
           <span className="font-bold text-primary text-left italic font-heading">
-            AI-Powered Generation
+            AI-Powered Diagram Generation
           </span>
           <h2 className="font-heading text-3xl tracking-tight sm:text-4xl text-balance text-left font-bold">
-            Effortless Diagram Creation
+            Transform Ideas into Visuals Instantly
           </h2>
         </div>
         <p className="text-lg text-muted-foreground text-balance max-w-lg text-left hidden">
-          Transform complex ideas into clear, professional diagrams with just a text description.
+          Turn complex technical concepts into clear, professional diagrams with just a text description.
         </p>
         <div className="flex flex-col gap-8">
           <FeatureItem
             icon={Search}
-            title="Natural Language Input"
-            description="Simply describe your diagram in plain text, and our AI understands and creates it instantly."
+            title="Natural Language Understanding"
+            description="Simply describe your diagram in plain text - our AI understands context and creates the perfect visualization."
           />
           <FeatureItem
             icon={BarChart2}
-            title="Error Resolution"
-            description="Our AI automatically detects and fixes issues, ensuring your diagrams are accurate and functional."
+            title="Intelligent Error Prevention"
+            description="Advanced AI automatically detects and prevents common diagram issues, ensuring professional results every time."
           />
         </div>
       </div>
