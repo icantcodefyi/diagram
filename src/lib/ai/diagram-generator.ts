@@ -136,112 +136,16 @@ export const generateDiagramWithAI = async (
   suggestedType: DiagramType,
   attempt = 0,
   isComplex = false,
-  previousError?: string,
 ): Promise<string> => {
   const model = getFlashModel();
   const syntaxDoc = await getSyntaxDocumentation(suggestedType);
 
-  const complexityGuidelines = isComplex
-    ? [
-        "1. Structure:",
-        "   - Use clear hierarchical organization",
-        "   - Group related elements using subgraphs",
-        "   - Maintain consistent direction (TB/LR/etc.)",
-        "2. Relationships:",
-        "   - Use precise arrow types for relationships",
-        "   - Include relationship labels where meaningful",
-        "   - Ensure proper connection syntax",
-        "3. Styling:",
-        "   - Apply consistent node shapes",
-        "   - Use color schemes meaningfully",
-        "   - Add tooltips for complex nodes",
-        "4. Advanced Features:",
-        "   - Implement click events if relevant",
-        "   - Use appropriate line styles",
-        "   - Add descriptive titles/labels",
-      ]
-    : [
-        "1. Structure:",
-        "   - Keep layout simple and linear",
-        "   - Minimize crossing lines",
-        "   - Use basic top-to-bottom flow",
-        "2. Relationships:",
-        "   - Use basic arrows (-->)",
-        "   - Keep labels short and clear",
-        "   - Direct connections only",
-        "3. Styling:",
-        "   - Minimal use of shapes",
-        "   - Limited color palette",
-        "   - Focus on readability",
-      ];
-
-  const syntaxValidationSteps = [
-    "1. Verify diagram type declaration is correct",
-    "2. Check all node declarations follow documentation",
-    "3. Validate relationship syntax",
-    "4. Confirm subgraph syntax if used",
-    "5. Verify style declarations",
-    "6. Check for proper line endings",
-    "7. Validate direction statements",
-    "8. Ensure proper nesting of elements",
-  ];
-
   const diagramPrompt = DIAGRAM_PROMPTS[suggestedType].split('\n').map(line => `   ${line}`).join('\n');
 
-  let prompt: string;
-
-  if (attempt === 0) {
-    prompt = `As an expert in Mermaid.js diagram generation, create a ${isComplex ? "comprehensive" : "simple"} ${suggestedType} diagram following these specialized requirements exactly.
-
-Input Text to Visualize:
-${text}
-
-Specialized Requirements for ${suggestedType}:
-${diagramPrompt}
-
-Follow these exact steps:
-
-1. First, analyze the requirements from the specialized prompt above
-2. Then, implement the diagram following this structure:
-${diagramPrompt}
-
-3. Apply these complexity guidelines:
-${complexityGuidelines.join('\n')}
-
-4. Validate against official syntax:
-${syntaxDoc}
-
-5. Perform final validation:
-${syntaxValidationSteps.join('\n')}
-
-Critical Requirements:
-1. Start with "${suggestedType}" declaration
-2. Follow exact Mermaid.js syntax
-3. Ensure all nodes are declared before use
-4. Use proper arrow syntax
-5. Maintain consistent indentation
-6. No markdown or extra text
-
-Return only the Mermaid diagram code, no explanations.`;
-  } else {
-    const errorAnalysis = previousError
-      ? `Previous Error Analysis:
-1. Error: ${previousError}
-2. Common causes:
-   - Incorrect syntax in node declarations
-   - Invalid relationship definitions
-   - Improper subgraph structure
-   - Malformed style declarations
-3. Focus areas for correction:
-   - Syntax validation
-   - Proper closing of blocks
-   - Valid relationship types
-   - Correct style formats`
-      : "";
-
-    prompt = `As an expert Mermaid.js developer, fix the invalid diagram while following these specialized requirements exactly.
-
-${errorAnalysis}
+  // Different prompt strategies based on attempt number
+  const promptStrategies: (() => string)[] = [
+    // First attempt - Standard approach with clear structure
+    () => `As an expert in Mermaid.js diagram generation, create a ${isComplex ? "comprehensive" : "simple"} ${suggestedType} diagram.
 
 Input Text to Visualize:
 ${text}
@@ -249,31 +153,79 @@ ${text}
 Specialized Requirements for ${suggestedType}:
 ${diagramPrompt}
 
-Follow these exact steps:
-
-1. First, analyze the requirements from the specialized prompt above
-2. Then, implement the diagram following this structure:
-${diagramPrompt}
-
-3. Apply these complexity guidelines:
-${complexityGuidelines.join('\n')}
-
-4. Validate against official syntax:
-${syntaxDoc}
-
-5. Perform final validation:
-${syntaxValidationSteps.join('\n')}
-
-Critical Requirements:
+Follow these guidelines:
 1. Start with "${suggestedType}" declaration
 2. Follow exact Mermaid.js syntax
-3. Ensure all nodes are declared before use
-4. Use proper arrow syntax
-5. Maintain consistent indentation
-6. No markdown or extra text
+3. Keep it ${isComplex ? "detailed" : "simple"} and clear
+4. Focus on readability
 
-Return only the Mermaid diagram code, no explanations.`;
+Reference Syntax:
+${syntaxDoc}
+
+Return only the Mermaid diagram code, no explanations.`,
+
+    // Second attempt - Focus on hierarchical breakdown
+    () => `Create a ${suggestedType} diagram by breaking down the components hierarchically.
+
+Content to Visualize:
+${text}
+
+Key Points:
+1. Break down the main concepts first
+2. Establish clear relationships
+3. Use proper ${suggestedType} syntax
+4. Keep the structure ${isComplex ? "comprehensive" : "minimal"}
+
+Syntax Guidelines:
+${syntaxDoc}
+
+Return only valid Mermaid.js code.`,
+
+    // Third attempt - Systematic approach
+    () => `Generate a ${suggestedType} diagram using a systematic approach.
+
+Text for Visualization:
+${text}
+
+Process:
+1. Identify main elements
+2. Define relationships
+3. Organize layout
+4. Apply ${isComplex ? "advanced" : "basic"} formatting
+
+Technical Requirements:
+1. Valid ${suggestedType} syntax
+2. Clear node definitions
+3. Proper connections
+4. ${isComplex ? "Detailed" : "Simple"} structure
+
+Return only the diagram code.`,
+
+    // Fourth attempt - Alternative perspective
+    () => `Design a ${suggestedType} diagram with a fresh perspective.
+
+Source Text:
+${text}
+
+Focus Areas:
+1. Essential components only
+2. Clear flow and structure
+3. ${isComplex ? "Rich" : "Basic"} relationships
+4. Standard syntax
+
+Syntax Reference:
+${syntaxDoc}
+
+Return only Mermaid.js compatible code.`
+  ];
+
+  // Get the appropriate prompt strategy based on attempt number (cycling through if we exceed the number of strategies)
+  const strategyIndex = attempt % promptStrategies.length;
+  const selectedStrategy = promptStrategies[strategyIndex];
+  if (!selectedStrategy) {
+    throw new Error('No valid prompt strategy found');
   }
+  const prompt = selectedStrategy();
 
   return new Promise((resolve, reject) => {
     const request = async () => {
