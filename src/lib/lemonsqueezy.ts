@@ -1,26 +1,11 @@
-const LEMON_SQUEEZY_API_URL = "https://api.lemonsqueezy.com/v1/checkouts";
-
+import { type NewCheckout, createCheckout as createLemonCheckout, lemonSqueezySetup } from '@lemonsqueezy/lemonsqueezy.js';
 import { env } from "@/env";
 
-interface LemonSqueezyCheckoutResponse {
-  data: {
-    type: string;
-    id: string;
-    attributes: {
-      url: string;
-      [key: string]: unknown;
-    };
-    [key: string]: unknown;
-  };
-}
-
-interface LemonSqueezyErrorResponse {
-  errors: Array<{
-    status: string;
-    title: string;
-    detail: string;
-  }>;
-}
+// Initialize the SDK
+lemonSqueezySetup({
+  apiKey: env.LEMONSQUEEZY_API_KEY,
+  onError: (error) => console.error("Lemon Squeezy Error:", error),
+});
 
 /**
  * Creates a checkout session with Lemon Squeezy
@@ -37,52 +22,28 @@ export async function createCheckoutSession(
   }
 
   try {
-    const response = await fetch(LEMON_SQUEEZY_API_URL, {
-      method: "POST",
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${env.LEMONSQUEEZY_API_KEY}`,
-      },
-      body: JSON.stringify({
-        data: {
-          type: "checkouts",
-          attributes: {
-            checkout_data: {
-              email: customerEmail,
-              custom: {
-                user_email: customerEmail,
-              },
-            },
-          },
-          relationships: {
-            store: {
-              data: {
-                type: "stores",
-                id: "118138"
-              }
-            },
-            variant: {
-              data: {
-                type: "variants",
-                id: variantId.toString()
-              }
-            }
-          },
-          test_mode: env.NODE_ENV === "development",
+    const storeId = "118138"; // Your store ID
+    const checkoutOptions: NewCheckout = {
+      checkoutData: {
+        email: customerEmail,
+        custom: {
+          user_email: customerEmail,
         },
-      }),
-    });
+      },
+      testMode: env.NODE_ENV === "development",
+    };
 
-    if (!response.ok) {
-      const errorData = (await response.json()) as LemonSqueezyErrorResponse;
-      console.error("LemonSqueezy API Error:", errorData);
-      throw new Error(
-        errorData.errors?.[0]?.detail ?? `HTTP error! status: ${response.status}`
-      );
+    const { error, data } = await createLemonCheckout(storeId, variantId.toString(), checkoutOptions);
+    
+    if (error) {
+      console.error("LemonSqueezy API Error:", error);
+      throw new Error(error.message);
     }
 
-    const data = (await response.json()) as LemonSqueezyCheckoutResponse;
+    if (!data?.data?.attributes?.url) {
+      throw new Error("No checkout URL returned from Lemon Squeezy");
+    }
+
     return data.data.attributes.url;
   } catch (error) {
     console.error("Error creating Lemon Squeezy checkout:", error);
