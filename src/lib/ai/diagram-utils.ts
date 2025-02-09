@@ -43,3 +43,18 @@ export const formatDiagramCode = (code: string): string => {
   // Remove empty lines at start and end
   return formattedCode.replace(/^\s*[\r\n]/gm, "").trim();
 }; 
+
+export const cleanJsonResponse = (text: string): string => {
+  // Remove markdown code block syntax and any extra whitespace
+  const cleaned = text.replace(/```json\n?|\n?```/g, "").trim();
+  
+  // Find the first { and last } to extract just the JSON object
+  const startIndex = cleaned.indexOf('{');
+  const endIndex = cleaned.lastIndexOf('}');
+  
+  if (startIndex === -1 || endIndex === -1) {
+    throw new Error("No valid JSON object found in response");
+  }
+  
+  return cleaned.slice(startIndex, endIndex + 1);
+};

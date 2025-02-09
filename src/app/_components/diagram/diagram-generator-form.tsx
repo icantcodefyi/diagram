@@ -306,7 +306,7 @@ export function DiagramGeneratorForm({
                             id="complex-mode"
                             checked={isComplex}
                             onCheckedChange={setIsComplex}
-                            disabled={isLoading}
+                            disabled={true}
                           />
                           <Label
                             htmlFor="complex-mode"

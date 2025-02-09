@@ -14,6 +14,7 @@ export const env = createEnv({
     AUTH_GOOGLE_ID: z.string(),
     AUTH_GOOGLE_SECRET: z.string(),
     GEMINI_API_KEY: z.string(),
+    OPENAI_API_KEY: z.string(),
     DB_URL: z.string().url(),
     LEMONSQUEEZY_API_KEY: z.string(),
     LEMONSQUEEZY_WEBHOOK_SECRET: z.string(),
@@ -27,6 +28,7 @@ export const env = createEnv({
    * isn't built with invalid env vars. To expose them to the client, prefix them with
    * `NEXT_PUBLIC_`.
    */
+
   client: {
     NEXT_PUBLIC_APP_URL: z.string().url(),
     NEXT_PUBLIC_POSTHOG_KEY: z.string(),
@@ -42,6 +44,7 @@ export const env = createEnv({
     AUTH_GOOGLE_ID: process.env.AUTH_GOOGLE_ID,
     AUTH_GOOGLE_SECRET: process.env.AUTH_GOOGLE_SECRET,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     DB_URL: process.env.DB_URL,
     NODE_ENV: process.env.NODE_ENV,
     LEMONSQUEEZY_API_KEY: process.env.LEMONSQUEEZY_API_KEY,

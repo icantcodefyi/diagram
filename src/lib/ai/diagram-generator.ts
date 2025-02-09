@@ -6,6 +6,8 @@ import path from "path";
 import { formatDiagramCode, removeStyles } from "./diagram-utils";
 import { addToQueue, makeAPIRequestWithRetry } from "./queue";
 import { getFlashModel, getFlashLiteModel } from "./gemini-client";
+import { type ValidationResponse, type TypeDeterminationResponse } from "./types";
+import { cleanJsonResponse } from "./diagram-utils";
 
 const getSyntaxDocumentation = async (
   diagramType: DiagramType,
@@ -26,33 +28,6 @@ const getSyntaxDocumentation = async (
     );
     return "";
   }
-};
-
-interface ValidationResponse {
-  isValid: boolean;
-  understanding: string | null;
-  error: string | null;
-}
-
-interface TypeDeterminationResponse {
-  type: string;
-  reasoning: string;
-  enhancedText: string;
-}
-
-const cleanJsonResponse = (text: string): string => {
-  // Remove markdown code block syntax and any extra whitespace
-  const cleaned = text.replace(/```json\n?|\n?```/g, "").trim();
-  
-  // Find the first { and last } to extract just the JSON object
-  const startIndex = cleaned.indexOf('{');
-  const endIndex = cleaned.lastIndexOf('}');
-  
-  if (startIndex === -1 || endIndex === -1) {
-    throw new Error("No valid JSON object found in response");
-  }
-  
-  return cleaned.slice(startIndex, endIndex + 1);
 };
 
 // Function to determine the best diagram type using AI
@@ -166,7 +141,6 @@ export const generateDiagramWithAI = async (
   const model = getFlashModel();
   const syntaxDoc = await getSyntaxDocumentation(suggestedType);
 
-  // Define complexity-specific guidelines with more structure for complex diagrams
   const complexityGuidelines = isComplex
     ? [
         "1. Structure:",
@@ -351,12 +325,7 @@ Rules:
 3. Focus on the main concept
 4. No quotes or special characters
 5. Return only the title, nothing else
-
-Example titles:
-- User Authentication Flow
-- Project Dependencies
-- Order Processing System
-- Team Hierarchy Structure`;
+`;
 
   return new Promise((resolve) => {
     const request = async () => {
