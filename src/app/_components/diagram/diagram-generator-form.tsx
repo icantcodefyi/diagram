@@ -27,6 +27,12 @@ import {
 } from "@/components/ui/dialog";
 import { AnimatedCounter } from "@/components/ui/animated-counter";
 import { getAnonymousUser, updateAnonymousCredits } from "@/lib/anonymous-user";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DiagramGeneratorFormProps {
   onDiagramGenerated: (diagram: string, type: DiagramType) => void;
@@ -268,18 +274,29 @@ export function DiagramGeneratorForm({
               />
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Switch
-                    id="complex-mode"
-                    checked={isComplex}
-                    onCheckedChange={setIsComplex}
-                    disabled={isLoading}
-                  />
-                  <Label
-                    htmlFor="complex-mode"
-                    className="cursor-pointer select-none text-sm text-muted-foreground"
-                  >
-                    Generate detailed and sophisticated diagram
-                  </Label>
+                  <TooltipProvider delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            id="complex-mode"
+                            checked={isComplex}
+                            onCheckedChange={setIsComplex}
+                            disabled={true}
+                          />
+                          <Label
+                            htmlFor="complex-mode"
+                            className="cursor-pointer select-none text-sm text-muted-foreground"
+                          >
+                            Generate detailed and sophisticated diagram
+                          </Label>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Coming soon!</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">
