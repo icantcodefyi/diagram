@@ -13,6 +13,14 @@ import {
 import { db } from "@/server/db";
 import { validateMermaidDiagram as validateMermaid } from "@/server/services/mermaid-validation.service";
 import { validateAndUpdateUserCredits } from "@/server/services/credits.service";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { env } from "@/env";
+
+if (!process.env.GEMINI_API_KEY) {
+  throw new Error("GEMINI_API_KEY is not defined");
+}
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Input schemas
 const generateDiagramSchema = z.object({
@@ -27,6 +35,11 @@ const deleteDiagramSchema = z.object({
   diagramId: z.string().min(1, "Diagram ID is required"),
 });
 
+const improvePromptSchema = z.object({
+  text: z.string().min(1, "Please provide text to improve"),
+  anonymousId: z.string().optional(),
+});
+
 export const aiRouter = createTRPCRouter({
   generateDiagram: publicProcedure
     .input(generateDiagramSchema)
@@ -36,7 +49,7 @@ export const aiRouter = createTRPCRouter({
         await validateAndUpdateUserCredits(
           ctx.session?.user?.id,
           input.anonymousId,
-          input.isComplex ?? false,
+          false,
         );
 
         let attempts = 0;
@@ -188,5 +201,50 @@ export const aiRouter = createTRPCRouter({
       return {
         message: "Diagram deleted successfully",
       };
+    }),
+
+  improvePrompt: publicProcedure
+    .input(improvePromptSchema)
+    .mutation(async ({ input, ctx }) => {
+      // Validate and update credits first
+      await validateAndUpdateUserCredits(
+        ctx.session?.user?.id,
+        input.anonymousId,
+        false,
+      );
+
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.0-flash-lite-preview-02-05",
+      });
+
+      const prompt = `Enhance this diagram description to be more diagram-friendly and structured:
+
+Original text: "${input.text}"
+
+Guidelines:
+1. Identify and clarify relationships between elements (uses, depends on, connects to, etc.)
+2. Add specific directional flows or sequences where applicable
+3. Group related elements and establish hierarchies
+4. Use consistent terminology and naming
+5. Specify any important attributes or properties
+6. Keep the description focused and organized
+
+
+Return only the improved text, no explanations additional content and remove markdown formatting.`;
+
+      try {
+        const result = await model.generateContent(prompt);
+        const improvedPrompt = result.response.text().trim();
+
+        return {
+          improvedPrompt,
+          message: "Successfully improved prompt",
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to improve prompt",
+        });
+      }
     }),
 });

@@ -1,18 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { api } from "@/trpc/react";
 import { useSession } from "next-auth/react";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/texturebutton";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader, RefreshCw, Twitter } from "lucide-react";
+import { Loader, RefreshCw, Twitter, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import {
-  EXAMPLE_SUGGESTIONS,
-  type DiagramType,
-} from "@/types/diagram";
+import { EXAMPLE_SUGGESTIONS, type DiagramType } from "@/types/diagram";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +27,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 interface DiagramGeneratorFormProps {
   onDiagramGenerated: (diagram: string, type: DiagramType, enhancedText?: string) => void;
@@ -53,12 +48,14 @@ export function DiagramGeneratorForm({
   const { toast } = useToast();
   const { data: session } = useSession();
   const hasInitialized = useRef(false);
+  const [isImprovingPrompt, setIsImprovingPrompt] = useState(false);
 
   // Fetch user credits if logged in
-  const { data: userCredits } = api.ai.getUserCredits.useQuery(undefined, {
-    enabled: !!session?.user,
-    refetchOnWindowFocus: true,
-  });
+  const { data: userCredits, refetch: refetchCredits } =
+    api.ai.getUserCredits.useQuery(undefined, {
+      enabled: !!session?.user,
+      refetchOnWindowFocus: true,
+    });
 
   // Fetch anonymous user credits if not logged in
   useEffect(() => {
@@ -120,6 +117,7 @@ export function DiagramGeneratorForm({
       }
     },
     onError: (err) => {
+
       if (err instanceof Error) {
         // Handle validation errors specifically
         if (err.message.includes("Invalid input")) {
@@ -203,7 +201,7 @@ export function DiagramGeneratorForm({
           if (credits < requiredCredits) {
             toast({
               title: "Insufficient Credits",
-              description: session?.user 
+              description: session?.user
                 ? "You don't have enough credits for this operation."
                 : "Not enough anonymous credits. Sign up to get more credits!",
               variant: "destructive",
@@ -236,7 +234,77 @@ export function DiagramGeneratorForm({
 
       void generateFromQuery();
     }
-  }, [session?.user, userCredits?.credits, anonymousCredits, anonymousId, isComplex, generateDiagram, toast, onShowLogin]);
+  }, [
+    session?.user,
+    userCredits?.credits,
+    anonymousCredits,
+    anonymousId,
+    isComplex,
+    generateDiagram,
+    toast,
+    onShowLogin,
+  ]);
+
+  // Add the improve prompt mutation
+  const improvePrompt = api.ai.improvePrompt.useMutation({
+    onMutate: () => {
+      setIsImprovingPrompt(true);
+    },
+    onSettled: () => {
+      setIsImprovingPrompt(false);
+    },
+    onSuccess: async (data) => {
+      setInput(data.improvedPrompt);
+
+      if (session?.user) {
+        // Refetch credits for logged in users
+        await refetchCredits();
+      } else if (anonymousCredits !== null) {
+        // Update local state for anonymous users
+        setAnonymousCredits(anonymousCredits - 1);
+        // Also update localStorage
+        await updateAnonymousCredits(anonymousCredits - 1);
+      }
+
+      toast({
+        title: "Prompt Improved",
+        description:
+          "Your prompt has been enhanced for better results (1 credit used)",
+        variant: "default",
+        duration: 3000,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to improve prompt",
+        variant: "destructive",
+        duration: 3000,
+      });
+    },
+  });
+
+  // Add keyboard shortcut handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        e.key === "i" &&
+        input.trim() &&
+        !isLoading &&
+        !isImprovingPrompt
+      ) {
+        e.preventDefault();
+        improvePrompt.mutate({
+          text: input,
+          anonymousId: !session?.user ? anonymousId! : undefined,
+        });
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [input, isLoading, isImprovingPrompt, session?.user, anonymousId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -281,21 +349,62 @@ export function DiagramGeneratorForm({
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={`Example: ${EXAMPLE_SUGGESTIONS.flowchart}`}
-                className="min-h-[128px] resize-y rounded-[0.75rem]"
-                disabled={isLoading}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    if (!isLoading && input.trim()) {
-                      void handleSubmit(e);
+              <div className="relative">
+                <Textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder={`Example: ${EXAMPLE_SUGGESTIONS.flowchart}`}
+                  className={cn(
+                    "min-h-[128px] resize-y rounded-[0.75rem]",
+                    isImprovingPrompt && "opacity-70",
+                  )}
+                  disabled={isLoading || isImprovingPrompt}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      if (!isLoading && input.trim()) {
+                        void handleSubmit(e);
+                      }
                     }
-                  }
-                }}
-              />
+                  }}
+                />
+                <div className="absolute bottom-2 right-2 flex gap-2">
+                  <TooltipProvider delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="minimal"
+                          size="sm"
+                          onClick={() =>
+                            improvePrompt.mutate({
+                              text: input,
+                              anonymousId: !session?.user
+                                ? anonymousId!
+                                : undefined,
+                            })
+                          }
+                          disabled={
+                            !input.trim() || isLoading || isImprovingPrompt
+                          }
+                        >
+                          {isImprovingPrompt ? (
+                            <Loader className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Wand2 className="mr-2 h-4 w-4" />
+                          )}
+                          {isImprovingPrompt ? "Improving..." : "Improve"}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="max-w-[200px]">
+                        <p>
+                          Enhance your prompt with AI assistance (⌘/Ctrl + I)
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <TooltipProvider delayDuration={100}>
@@ -324,13 +433,14 @@ export function DiagramGeneratorForm({
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">
-                    <AnimatedCounter 
-                      value={credits}
-                      className="tabular-nums"
-                    />
+                    <AnimatedCounter value={credits} className="tabular-nums" />
                     {!session?.user && " (Anonymous)"}
                   </Badge>
-                  {isComplex && <span className="text-xs text-muted-foreground">(Uses 2 credits)</span>}
+                  {isComplex && (
+                    <span className="text-xs text-muted-foreground">
+                      (Uses 2 credits)
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -371,18 +481,21 @@ export function DiagramGeneratorForm({
           <DialogHeader>
             <DialogTitle>Need More Credits?</DialogTitle>
             <DialogDescription className="pt-2">
-              {session?.user ? (
-                "You've used all your credits for today. Since we're still in the experimental stage, you can request more credits by DMing us on Twitter."
-              ) : (
-                "You've used all your anonymous credits. Sign up to get more credits and unlock additional features!"
-              )}
+              {session?.user
+                ? "You've used all your credits for today. Since we're still in the experimental stage, you can request more credits by DMing us on Twitter."
+                : "You've used all your anonymous credits. Sign up to get more credits and unlock additional features!"}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="sm:justify-start">
             {session?.user ? (
               <Button
                 variant="accent"
-                onClick={() => window.open("https://twitter.com/messages/compose?recipient_id=icantcodefyi", "_blank")}
+                onClick={() =>
+                  window.open(
+                    "https://twitter.com/messages/compose?recipient_id=icantcodefyi",
+                    "_blank",
+                  )
+                }
               >
                 <Twitter className="mr-2 h-4 w-4" />
                 DM on Twitter
@@ -403,4 +516,4 @@ export function DiagramGeneratorForm({
       </Dialog>
     </>
   );
-} 
+}
