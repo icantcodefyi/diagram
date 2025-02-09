@@ -49,7 +49,7 @@ export const aiRouter = createTRPCRouter({
         await validateAndUpdateUserCredits(
           ctx.session?.user?.id,
           input.anonymousId,
-          input.isComplex ?? false,
+          false,
         );
 
         let attempts = 0;
@@ -206,8 +206,7 @@ export const aiRouter = createTRPCRouter({
       await validateAndUpdateUserCredits(
         ctx.session?.user?.id,
         input.anonymousId,
-        false, // isComplex = false
-        1, // cost = 1 credit
+        false,
       );
 
       const model = genAI.getGenerativeModel({
