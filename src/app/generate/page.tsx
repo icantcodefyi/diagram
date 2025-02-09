@@ -6,6 +6,8 @@ import { DiagramHistory } from "@/app/_components/diagram-history";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { useEffect, Suspense } from "react";
+import { OnboardingComponent } from "@/app/_components/onboarding-steps";
+import { motion } from "framer-motion";
 
 function GeneratePageContent() {
   const searchParams = useSearchParams();
@@ -21,10 +23,22 @@ function GeneratePageContent() {
     <div className="flex min-h-screen w-full flex-col">
       <div className="flex flex-1">
         <DiagramHistory />
-        <div className="relative flex flex-1 items-center justify-center">
-          <DiagramGenerator />
-          <div className="absolute right-4 top-4">
-            <AuthButton />
+        <div className="relative flex flex-1 flex-col">
+          <div className="relative flex items-center justify-center p-4 w-full max-w-7xl mx-auto">
+            <motion.div 
+              className="w-full sm:w-auto"
+              initial={{ y: -100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ type: "spring", duration: 0.6 }}
+            >
+              <OnboardingComponent />
+            </motion.div>
+            <div className="flex-shrink-0">
+              <AuthButton />
+            </div>
+          </div>
+          <div className="flex flex-1 items-center justify-center">
+            <DiagramGenerator />
           </div>
         </div>
       </div>
