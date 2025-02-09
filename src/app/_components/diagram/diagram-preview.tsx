@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, memo } from "react";
 import {
   Card,
   CardContent,
@@ -12,7 +12,36 @@ import {
 } from "@/types/diagram";
 import { useDiagramPreview } from "@/hooks/use-diagram-preview";
 import { DiagramControls } from "./diagram-controls";
+import ReactFlow, { 
+  Background, 
+  Controls,
+  ReactFlowProvider,
+  type NodeProps,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
 import { renderMermaidDiagram } from "@/lib/mermaid-config";
+
+interface MermaidNodeData {
+  diagram: string;
+  id: string;
+}
+
+const MermaidNode = memo(({ data }: NodeProps<MermaidNodeData>) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void renderMermaidDiagram(data.diagram, `#${data.id}`);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [data.diagram, data.id]);
+
+  return (
+    <div className="bg-background/50 p-4 rounded-lg shadow-lg">
+      <div id={data.id} />
+    </div>
+  );
+});
+
+MermaidNode.displayName = "MermaidNode";
 
 interface DiagramPreviewProps {
   diagram: string;
@@ -20,11 +49,9 @@ interface DiagramPreviewProps {
   onUpdate?: (newContent: string) => void;
 }
 
-export function DiagramPreview({ diagram, diagramType, onUpdate }: DiagramPreviewProps) {
+function DiagramPreviewContent({ diagram, diagramType, onUpdate }: DiagramPreviewProps) {
   const {
     currentTheme,
-    scale,
-    handleCopyToClipboard,
     handleThemeChange,
     zoomIn,
     zoomOut,
@@ -34,46 +61,20 @@ export function DiagramPreview({ diagram, diagramType, onUpdate }: DiagramPrevie
     diagramId: "mermaid-diagram",
   });
 
-  const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const nodes = [
+    {
+      id: 'mermaid',
+      type: 'mermaidNode',
+      position: { x: 0, y: 0 },
+      data: { diagram, id: "mermaid-diagram" },
+      draggable: true,
+      style: { cursor: 'grab' },
+    },
+  ];
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    setDragStart({
-      x: e.clientX - position.x,
-      y: e.clientY - position.y,
-    });
+  const nodeTypes = {
+    mermaidNode: MermaidNode,
   };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging) {
-      setPosition({
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y,
-      });
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const handleWheel = (e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      if (e.deltaY < 0) {
-        zoomIn();
-      } else {
-        zoomOut();
-      }
-    }
-  };
-
-  // Initial render and theme changes
-  useEffect(() => {
-    void renderMermaidDiagram(diagram, "#mermaid-diagram");
-  }, [diagram, currentTheme]);
 
   return (
     <Card className="relative">
@@ -88,30 +89,25 @@ export function DiagramPreview({ diagram, diagramType, onUpdate }: DiagramPrevie
       </CardHeader>
       <CardContent>
         <div className="relative rounded-lg bg-white p-4 dark:bg-slate-900">
-          <div
-            className="flex min-h-[500px] items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
-            style={{
-              position: 'relative',
-              width: '100%',
-            }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onWheel={handleWheel}
-          >
-            <div
-              style={{
-                transformOrigin: "center center",
-                transition: isDragging ? "none" : "transform 0.2s ease-in-out",
-                position: 'absolute',
-                left: '50%',
-                top: '50%',
-                transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`,
-              }}
+          <div className="h-[500px] w-full">
+            <ReactFlow
+              nodes={nodes}
+              edges={[]}
+              nodeTypes={nodeTypes}
+              fitView
+              attributionPosition="bottom-left"
+              minZoom={0.1}
+              maxZoom={4}
+              defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+              panOnScroll
+              selectionOnDrag
+              panOnDrag
+              zoomOnScroll
+              nodesDraggable
             >
-              <div id="mermaid-diagram" />
-            </div>
+              <Background />
+              <Controls />
+            </ReactFlow>
           </div>
           <DiagramControls
             className="absolute right-4 top-4 z-10"
@@ -120,7 +116,6 @@ export function DiagramPreview({ diagram, diagramType, onUpdate }: DiagramPrevie
             type={diagramType ?? "diagram"}
             currentTheme={currentTheme}
             onThemeChange={handleThemeChange}
-            onCopy={handleCopyToClipboard}
             onZoomIn={zoomIn}
             onZoomOut={zoomOut}
             onResetZoom={resetZoom}
@@ -129,5 +124,13 @@ export function DiagramPreview({ diagram, diagramType, onUpdate }: DiagramPrevie
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+export function DiagramPreview(props: DiagramPreviewProps) {
+  return (
+    <ReactFlowProvider>
+      <DiagramPreviewContent {...props} />
+    </ReactFlowProvider>
   );
 }

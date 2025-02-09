@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, memo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,11 +9,40 @@ import {
 } from "@/components/ui/dialog";
 import { type Diagram as PrismaDiagram } from "@prisma/client";
 import { type Diagram as StoreDiagram } from "@/store/diagram-store";
-import { renderMermaidDiagram } from "@/lib/mermaid-config";
 import { formatDistanceToNow } from "date-fns";
 import { useDiagramPreview } from "@/hooks/use-diagram-preview";
 import { DiagramControls } from "./diagram-controls";
 import { Badge } from "@/components/ui/badge";
+import ReactFlow, { 
+  Background, 
+  Controls,
+  ReactFlowProvider,
+  type NodeProps,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
+import { renderMermaidDiagram } from "@/lib/mermaid-config";
+
+interface MermaidNodeData {
+  diagram: string;
+  id: string;
+}
+
+const MermaidNode = memo(({ data }: NodeProps<MermaidNodeData>) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void renderMermaidDiagram(data.diagram, `#${data.id}`);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [data.diagram, data.id]);
+
+  return (
+    <div className="bg-background/50 p-4 rounded-lg shadow-lg">
+      <div id={data.id} />
+    </div>
+  );
+});
+
+MermaidNode.displayName = "MermaidNode";
 
 interface DiagramPreviewModalProps {
   diagram: PrismaDiagram | StoreDiagram;
@@ -22,7 +51,7 @@ interface DiagramPreviewModalProps {
   onUpdate?: (newContent: string) => void;
 }
 
-export function DiagramPreviewModal({
+function DiagramPreviewModalContent({
   diagram,
   isOpen,
   onClose,
@@ -31,67 +60,29 @@ export function DiagramPreviewModal({
   const diagramId = `modal-diagram-${diagram.id}`;
   const {
     currentTheme,
-    scale,
-    handleCopyToClipboard,
     handleThemeChange,
     zoomIn,
     zoomOut,
     resetZoom,
-    isMinZoom,
-    isMaxZoom,
   } = useDiagramPreview({
     diagram: diagram.content,
     diagramId,
   });
 
-  const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const nodes = [
+    {
+      id: 'mermaid',
+      type: 'mermaidNode',
+      position: { x: 0, y: 0 },
+      data: { diagram: diagram.content, id: diagramId },
+      draggable: true,
+      style: { cursor: 'grab' },
+    },
+  ];
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true);
-    setDragStart({
-      x: e.clientX - position.x,
-      y: e.clientY - position.y,
-    });
+  const nodeTypes = {
+    mermaidNode: MermaidNode,
   };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging) {
-      setPosition({
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y,
-      });
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const handleWheel = (e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      if (e.deltaY < 0) {
-        zoomIn();
-      } else {
-        zoomOut();
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (isOpen) {
-      // Reset position when modal opens
-      setPosition({ x: 0, y: 0 });
-      // Wait for the modal to be fully rendered before rendering the diagram
-      const timer = setTimeout(() => {
-        void renderMermaidDiagram(diagram.content, `#${diagramId}`);
-      }, 100);
-
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen, diagram.content, diagramId, currentTheme]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -114,30 +105,25 @@ export function DiagramPreviewModal({
         </DialogHeader>
         <div className="relative mt-4 flex-1">
           <div className="relative rounded-lg bg-white p-4 dark:bg-slate-900">
-            <div
-              className="flex min-h-[600px] items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
-              style={{
-                position: 'relative',
-                width: '100%',
-              }}
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              onWheel={handleWheel}
-            >
-              <div
-                style={{
-                  transformOrigin: "center center",
-                  transition: isDragging ? "none" : "transform 0.2s ease-in-out",
-                  position: 'absolute',
-                  left: '50%',
-                  top: '50%',
-                  transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`,
-                }}
+            <div className="h-[600px] w-full">
+              <ReactFlow
+                nodes={nodes}
+                edges={[]}
+                nodeTypes={nodeTypes}
+                fitView
+                attributionPosition="bottom-left"
+                minZoom={0.1}
+                maxZoom={4}
+                defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+                panOnScroll
+                selectionOnDrag
+                panOnDrag
+                zoomOnScroll
+                nodesDraggable
               >
-                <div id={diagramId} />
-              </div>
+                <Background />
+                <Controls />
+              </ReactFlow>
             </div>
             <DiagramControls
               className="absolute right-4 top-4 z-10"
@@ -147,17 +133,22 @@ export function DiagramPreviewModal({
               name={diagram.name ?? undefined}
               currentTheme={currentTheme}
               onThemeChange={handleThemeChange}
-              onCopy={handleCopyToClipboard}
               onZoomIn={zoomIn}
               onZoomOut={zoomOut}
               onResetZoom={resetZoom}
               onContentUpdate={onUpdate}
-              isMinZoom={isMinZoom}
-              isMaxZoom={isMaxZoom}
             />
           </div>
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+export function DiagramPreviewModal(props: DiagramPreviewModalProps) {
+  return (
+    <ReactFlowProvider>
+      <DiagramPreviewModalContent {...props} />
+    </ReactFlowProvider>
   );
 }
