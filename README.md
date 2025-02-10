@@ -1,13 +1,88 @@
-Generate diagrams with gemini :3
+# Diagram Generator
 
-we use mermaid to genreate diagram, testing the abilities of latest gemini models 
+An AI-powered diagram generation tool that uses Gemini and Mermaid.js to create beautiful, accurate diagrams from natural language descriptions.
 
-basically once a user tries to generate we first check wether can a diagram even be generated from the prompt if not then nahhh 
+## 🌟 Features
 
-if yes we find out what type of diagram will suit the user best from the 20 types of diagram we can generate
+- **AI-Powered Diagram Generation**: Leverages Gemini AI to understand natural language descriptions and convert them into diagrams
+- **Multiple Diagram Types**: Supports 20+ different diagram types including:
+  - Flowcharts
+  - Sequence Diagrams
+  - Class Diagrams
+  - Entity Relationship Diagrams
+  - State Diagrams
+  - Gantt Charts
+  - Git Graphs
+  - And more!
+- **Smart Type Detection**: Automatically determines the most suitable diagram type for your description
+- **Validation & Error Handling**: Ensures generated diagrams are syntactically correct and renders properly
+- **Modern UI/UX**: Beautiful and responsive interface built with Next.js and Tailwind CSS
+- **Real-time Preview**: Instant visualization of generated diagrams
+- **Export Options**: Save diagrams in various formats
 
-then we use the docs of that specific diagram and give it as context to the ai and make him generate the code and then validate the code 
+## 🚀 Tech Stack
 
-validation on backend is tuf because mermaid is client side so we use puppeteer and validate the diagram 
+- **Frontend**: Next.js, React, TypeScript, Tailwind CSS
+- **AI Integration**: Google Gemini AI
+- **Diagram Rendering**: Mermaid.js
+- **Database**: Prisma with PostgreSQL
+- **Authentication**: NextAuth.js
+- **Styling**: Radix UI, Tailwind CSS
+- **Development**: ESLint, Prettier, TypeScript
 
-finally sending the response to frontend :)
+## 📋 Prerequisites
+
+- Node.js (v18 or higher)
+- PostgreSQL
+- Google Cloud API Key (for Gemini AI)
+
+## 🛠️ Setup
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd diagram
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Set up environment variables:
+```bash
+cp .env.example .env
+```
+Edit `.env` with your configuration:
+- Database URL
+- Google Cloud API Key
+- Other necessary credentials
+
+4. Set up the database:
+```bash
+npm run db:generate
+npm run db:push
+```
+
+5. Start the development server:
+```bash
+npm run dev
+```
+
+The application will be available at `http://localhost:3000`
+
+## 🎯 Usage
+
+1. Visit the application in your browser
+2. Enter a natural language description of the diagram you want to create
+3. The AI will automatically determine the best diagram type and generate the appropriate Mermaid.js code
+4. Preview the diagram in real-time
+5. Export or share your diagram as needed
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📝 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
