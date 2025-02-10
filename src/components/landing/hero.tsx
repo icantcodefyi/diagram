@@ -124,7 +124,7 @@ export function Hero() {
           </video>
         </motion.div>
       </div>
-      <div className="container mt-14 max-w-5xl">
+      {/* <div className="container mt-14 max-w-5xl">
         <h2 className="mb-12 text-center text-sm font-semibold leading-8 text-muted-foreground sm:text-lg">
           Trusted by developers, teams, and businesses worldwide
         </h2>
@@ -141,7 +141,7 @@ export function Hero() {
             className="col-start-2 sm:col-start-auto"
           />
         </div>
-      </div>
+      </div> */}
     </section>
   );
 }
