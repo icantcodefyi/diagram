@@ -58,7 +58,7 @@ export function Hero() {
               height={16}
             />
           </Link>
-          {/* <a
+          <Link
             href="https://www.producthunt.com/posts/autodiagram?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-autodiagram"
             target="_blank"
           >
@@ -68,7 +68,7 @@ export function Hero() {
               width="250"
               height="54"
             />
-          </a> */}
+          </Link>
         </motion.div>
         <motion.h1
           animate={{ y: 0, opacity: 1 }}
