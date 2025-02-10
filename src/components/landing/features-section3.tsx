@@ -1,5 +1,4 @@
 import { TextQuote, LineChart } from "lucide-react";
-import Image from "next/image";
 
 import { FeatureItem } from "@/components/landing/feature-item";
 import { DiagramTypesSlider } from "./diagram-types-slider";

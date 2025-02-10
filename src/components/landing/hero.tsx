@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { SocialProofLogo } from "@/components/landing/social-proof-logo";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export function Hero() {
   const [inputText, setInputText] = useState("");
@@ -44,9 +45,30 @@ export function Hero() {
           animate={{ y: 0, opacity: 1 }}
           initial={{ y: 5, opacity: 0 }}
           transition={{ delay: 0.8, duration: 0.4 }}
-          className="flex cursor-pointer items-center gap-1 rounded-full bg-secondary/10 px-4 py-1 font-medium text-secondary hover:bg-secondary/20"
+          className="flex cursor-pointer items-center gap-4 rounded-full px-4 py-1 font-medium text-secondary"
         >
-          <span className="text-sm">Introducing AutoDiagram</span>
+          <Link
+            href="https://peerlist.io/aniruddh2/project/autodiagram"
+            target="_blank"
+          >
+            <Image
+              src="/Launch_SVG_Light.svg"
+              alt="AutoDiagram"
+              width={200}
+              height={16}
+            />
+          </Link>
+          {/* <a
+            href="https://www.producthunt.com/posts/autodiagram?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-autodiagram"
+            target="_blank"
+          >
+            <Image
+              src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=863605&theme=light&t=1739146045661"
+              alt="AutoDiagram - Transform&#0032;Ideas&#0032;into&#0032;Professional&#0032;Diagrams&#0032;with&#0032;AI | Product Hunt"
+              width="250"
+              height="54"
+            />
+          </a> */}
         </motion.div>
         <motion.h1
           animate={{ y: 0, opacity: 1 }}
@@ -62,7 +84,8 @@ export function Hero() {
           transition={{ delay: 0.2, duration: 0.4 }}
           className="max-w-lg text-center text-lg text-muted-foreground sm:text-xl"
         >
-          Say goodbye to manual diagram creation. Describe your concept and let our AI craft professional-grade visuals instantly.
+          Say goodbye to manual diagram creation. Describe your concept and let
+          our AI craft professional-grade visuals instantly.
         </motion.p>
         <motion.form
           onSubmit={handleSubmit}
