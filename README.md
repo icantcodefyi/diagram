@@ -40,13 +40,13 @@ An AI-powered diagram generation tool that uses Gemini and Mermaid.js to create 
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/icantcodefyi/diagram.git
 cd diagram
 ```
 
 2. Install dependencies:
 ```bash
-npm install
+bun install
 ```
 
 3. Set up environment variables:
@@ -60,13 +60,13 @@ Edit `.env` with your configuration:
 
 4. Set up the database:
 ```bash
-npm run db:generate
-npm run db:push
+bun db:generate
+bun db:push
 ```
 
 5. Start the development server:
 ```bash
-npm run dev
+bun dev
 ```
 
 The application will be available at `http://localhost:3000`
