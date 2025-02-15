@@ -58,17 +58,6 @@ export function Hero() {
               height={16}
             />
           </Link>
-          <Link
-            href="https://www.producthunt.com/posts/autodiagram?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-autodiagram"
-            target="_blank"
-          >
-            <Image
-              src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=863605&theme=light&t=1739146045661"
-              alt="AutoDiagram - Transform&#0032;Ideas&#0032;into&#0032;Professional&#0032;Diagrams&#0032;with&#0032;AI | Product Hunt"
-              width="250"
-              height="54"
-            />
-          </Link>
         </motion.div>
         <motion.h1
           animate={{ y: 0, opacity: 1 }}
