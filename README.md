@@ -86,3 +86,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## 📝 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=icantcodefyi/diagram&type=Date)](https://star-history.com/#icantcodefyi/diagram&Date)
