@@ -4,10 +4,13 @@ import { DIAGRAM_PROMPTS } from "@/types/diagram-prompts";
 import fs from "fs/promises";
 import path from "path";
 import { formatDiagramCode, removeStyles } from "./diagram-utils";
-import { addToQueue, makeAPIRequestWithRetry } from "./queue";
-import { getFlashModel, getFlashLiteModel } from "./gemini-client";
-import { type ValidationResponse, type TypeDeterminationResponse } from "./types";
-import { cleanJsonResponse } from "./diagram-utils";
+import { addToQueue } from "./queue";
+import { azure } from "./azure-client";
+import { validationResponseSchema, typeDeterminationResponseSchema } from "./types";
+import { generateObject } from 'ai';
+import { env } from "@/env";
+import { z } from "zod";
+import { TOKEN_LIMITS } from "./types";
 
 const getSyntaxDocumentation = async (
   diagramType: DiagramType,
@@ -34,8 +37,6 @@ const getSyntaxDocumentation = async (
 export const determineDiagramType = async (
   text: string,
 ): Promise<{ type: DiagramType; isValid: boolean; enhancedText?: string; error?: string }> => {
-  const model = getFlashLiteModel();
-
   const validationPrompt = `Analyze this text and determine if we can generate a diagram from it if not return null, anything insensible also return null.
 
 Text to analyze: "${text}"
@@ -49,34 +50,15 @@ Return your response in this exact format (including the json code block):
 }
 \`\`\``;
 
-  try {
-    const validationResult = await makeAPIRequestWithRetry(async () => {
-      const response = await model.generateContent(validationPrompt);
-      return response;
-    });
-
-    const validationText = validationResult.response.text();
-    const cleanedValidationText = cleanJsonResponse(validationText);
-    const validationJson = JSON.parse(cleanedValidationText) as ValidationResponse;
-
-    if (!validationJson.isValid) {
-      return {
-        type: "flowchart", // default type
-        isValid: false,
-        error: validationJson.error ?? "The provided text doesn't contain enough information for a meaningful diagram"
-      };
-    }
-
-    // If valid, proceed with diagram type determination
-    const typePrompt = `Based on this understanding of the text, determine the most suitable Mermaid diagram type.
+  const typePrompt = `Based on this understanding of the text, determine the most suitable Mermaid diagram type.
 
 Text Understanding:
-${validationJson.understanding}
+${validationPrompt}
 
 Available diagram types and their use cases:
 ${Object.entries(DIAGRAM_TYPES)
-  .map(([type, desc]) => `- ${type}: ${desc}`)
-  .join("\n")}
+        .map(([type, desc]) => `- ${type}: ${desc}`)
+        .join("\n")}
 
 Consider:
 1. The type of information being represented
@@ -94,40 +76,61 @@ Return your response in this exact format (including the json code block):
 }
 \`\`\``;
 
-    const typeResult = await makeAPIRequestWithRetry(async () => {
-      const response = await model.generateContent(typePrompt);
-      return response;
-    });
+  return new Promise((resolve, reject) => {
+    const request = async () => {
+      try {
+        const { object: validationResult } = await generateObject({
+          model: azure(env.AZURE_MODEL_NAME),
+          messages: [{ role: 'user', content: validationPrompt }],
+          schema: validationResponseSchema,
+          maxTokens: TOKEN_LIMITS.validation.maxTokens,
+        });
 
-    const typeText = typeResult.response.text();
-    const cleanedTypeText = cleanJsonResponse(typeText);
-    const parsed = JSON.parse(cleanedTypeText) as TypeDeterminationResponse;
+        if (!validationResult.isValid) {
+          return resolve({
+            type: "flowchart",
+            isValid: false,
+            error: validationResult.error ?? "The provided text doesn't contain enough information for a meaningful diagram"
+          });
+        }
 
-    if (
-      parsed.type &&
-      typeof parsed.type === "string" &&
-      Object.prototype.hasOwnProperty.call(DIAGRAM_TYPES, parsed.type)
-    ) {
-      return {
-        type: parsed.type as DiagramType,
-        isValid: true,
-        enhancedText: parsed.enhancedText
-      };
-    }
+        // If valid, proceed with diagram type determination
+        const { object: typeResult } = await generateObject({
+          model: azure(env.AZURE_MODEL_NAME),
+          messages: [{ role: 'user', content: typePrompt }],
+          schema: typeDeterminationResponseSchema,
+          maxTokens: TOKEN_LIMITS.typeDetermination.maxTokens,
+        });
 
-    return {
-      type: "flowchart",
-      isValid: true,
-      enhancedText: validationJson.understanding ?? ""
+        if (
+          typeResult.type &&
+          typeof typeResult.type === "string" &&
+          Object.prototype.hasOwnProperty.call(DIAGRAM_TYPES, typeResult.type)
+        ) {
+          return resolve({
+            type: typeResult.type as DiagramType,
+            isValid: true,
+            enhancedText: typeResult.enhancedText
+          });
+        }
+
+        resolve({
+          type: "flowchart",
+          isValid: true,
+          enhancedText: validationResult.understanding ?? ""
+        });
+      } catch (error) {
+        console.error("Error in diagram type determination:", error);
+        resolve({
+          type: "flowchart",
+          isValid: false,
+          error: "Failed to analyze the text. Please try providing more specific information."
+        });
+      }
     };
-  } catch (error) {
-    console.error("Error in diagram type determination:", error);
-    return {
-      type: "flowchart",
-      isValid: false,
-      error: "Failed to analyze the text. Please try providing more specific information."
-    };
-  }
+
+    addToQueue(request, TOKEN_LIMITS.validation.totalTokens + TOKEN_LIMITS.typeDetermination.totalTokens);
+  });
 };
 
 // Function to generate diagram using AI
@@ -138,42 +141,41 @@ export const generateDiagramWithAI = async (
   isComplex = false,
   previousError?: string,
 ): Promise<string> => {
-  const model = getFlashModel();
   const syntaxDoc = await getSyntaxDocumentation(suggestedType);
 
   const complexityGuidelines = isComplex
     ? [
-        "1. Structure:",
-        "   - Use clear hierarchical organization",
-        "   - Group related elements using subgraphs",
-        "   - Maintain consistent direction (TB/LR/etc.)",
-        "2. Relationships:",
-        "   - Use precise arrow types for relationships",
-        "   - Include relationship labels where meaningful",
-        "   - Ensure proper connection syntax",
-        "3. Styling:",
-        "   - Apply consistent node shapes",
-        "   - Use color schemes meaningfully",
-        "   - Add tooltips for complex nodes",
-        "4. Advanced Features:",
-        "   - Implement click events if relevant",
-        "   - Use appropriate line styles",
-        "   - Add descriptive titles/labels",
-      ]
+      "1. Structure:",
+      "   - Use clear hierarchical organization",
+      "   - Group related elements using subgraphs",
+      "   - Maintain consistent direction (TB/LR/etc.)",
+      "2. Relationships:",
+      "   - Use precise arrow types for relationships",
+      "   - Include relationship labels where meaningful",
+      "   - Ensure proper connection syntax",
+      "3. Styling:",
+      "   - Apply consistent node shapes",
+      "   - Use color schemes meaningfully",
+      "   - Add tooltips for complex nodes",
+      "4. Advanced Features:",
+      "   - Implement click events if relevant",
+      "   - Use appropriate line styles",
+      "   - Add descriptive titles/labels",
+    ]
     : [
-        "1. Structure:",
-        "   - Keep layout simple and linear",
-        "   - Minimize crossing lines",
-        "   - Use basic top-to-bottom flow",
-        "2. Relationships:",
-        "   - Use basic arrows (-->)",
-        "   - Keep labels short and clear",
-        "   - Direct connections only",
-        "3. Styling:",
-        "   - Minimal use of shapes",
-        "   - Limited color palette",
-        "   - Focus on readability",
-      ];
+      "1. Structure:",
+      "   - Keep layout simple and linear",
+      "   - Minimize crossing lines",
+      "   - Use basic top-to-bottom flow",
+      "2. Relationships:",
+      "   - Use basic arrows (-->)",
+      "   - Keep labels short and clear",
+      "   - Direct connections only",
+      "3. Styling:",
+      "   - Minimal use of shapes",
+      "   - Limited color palette",
+      "   - Focus on readability",
+    ];
 
   const syntaxValidationSteps = [
     "1. Verify diagram type declaration is correct",
@@ -278,33 +280,22 @@ Return only the Mermaid diagram code, no explanations.`;
   return new Promise((resolve, reject) => {
     const request = async () => {
       try {
-        const result = await makeAPIRequestWithRetry(async () => {
-          const response = await model.generateContent(prompt);
-          return response;
+        const { object: mermaidCode } = await generateObject({
+          model: azure(env.AZURE_MODEL_NAME),
+          messages: [{ role: 'user', content: prompt }],
+          schema: z.string(),
+          maxTokens: TOKEN_LIMITS.diagramGeneration.maxTokens,
         });
-
-        const response = result.response;
-
-        if (!response?.text) {
-          throw new Error("Invalid or empty response from AI model");
-        }
-
-        const responseText = response.text();
-        if (typeof responseText !== "string") {
-          throw new Error("Invalid response format from AI model");
-        }
-
-        let mermaidCode = formatDiagramCode(responseText);
-        mermaidCode = removeStyles(mermaidCode);
-
-        resolve(mermaidCode);
+        if (!mermaidCode) throw new Error("Invalid or empty response from AI model");
+        let code = formatDiagramCode(mermaidCode);
+        resolve(removeStyles(code));
       } catch (error) {
         console.error("Error generating diagram:", error);
         reject(error instanceof Error ? error : new Error(String(error)));
       }
     };
 
-    addToQueue(request);
+    addToQueue(request, TOKEN_LIMITS.diagramGeneration.totalTokens);
   });
 };
 
@@ -313,8 +304,6 @@ export const generateDiagramTitle = async (
   text: string,
   diagramType: DiagramType,
 ): Promise<string> => {
-  const model = getFlashLiteModel();
-
   const prompt = `Generate a short, concise, and descriptive title (maximum 50 characters) for a ${diagramType} diagram based on this text. The title should capture the main concept or purpose of the diagram.
 
 Text to generate title for: "${text}"
@@ -330,21 +319,19 @@ Rules:
   return new Promise((resolve) => {
     const request = async () => {
       try {
-        const result = await makeAPIRequestWithRetry(async () => {
-          const response = await model.generateContent(prompt);
-          return response;
+        const { object: title } = await generateObject({
+          model: azure(env.AZURE_MODEL_NAME),
+          messages: [{ role: 'user', content: prompt }],
+          schema: z.string(),
+          maxTokens: TOKEN_LIMITS.titleGeneration.maxTokens,
         });
-
-        const title = result.response.text().trim();
-        // Ensure title is not too long and remove any quotes
-        const cleanTitle = title.replace(/["']/g, "").slice(0, 50);
-        resolve(cleanTitle || "Untitled Diagram");
+        resolve(title);
       } catch (error) {
         console.error("Error generating diagram title:", error);
         resolve("Untitled Diagram");
       }
     };
 
-    addToQueue(request);
+    addToQueue(request, TOKEN_LIMITS.titleGeneration.totalTokens);
   });
 };
