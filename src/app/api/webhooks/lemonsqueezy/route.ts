@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 import { env } from "@/env";
 import crypto from "crypto";
 import { 
-  getSubscription, 
   cancelSubscription 
 } from '@lemonsqueezy/lemonsqueezy.js';
 
@@ -19,8 +18,13 @@ interface LemonSqueezyWebhookBody {
     type: string;
     attributes: {
       user_email: string;
+      status: string;
+      cancelled: boolean;
+      renews_at: string;
+      ends_at: string | null;
       [key: string]: unknown;
     };
+    relationships?: Record<string, unknown>;
   };
 }
 
@@ -35,21 +39,20 @@ function verifyWebhookSignature(
   return signature === digest;
 }
 
-async function handleSubscriptionCreated(subscriptionId: string) {
-  const { error, data } = await getSubscription(subscriptionId);
+async function handleSubscriptionCreated(webhookData: LemonSqueezyWebhookBody) {
+  const subscriptionId = webhookData.data.id;
+  const subscription = webhookData.data;
   
-  if (error || !data?.data) {
-    console.error("Error fetching subscription:", error);
-    throw Error("Error fetching subscription");
-  }
-
-  const subscription = data.data;
-  const user_email = subscription.attributes.user_email;
+  // If webhook contains user_email in custom_data, use that, otherwise fallback to subscription data
+  const user_email = typeof webhookData.meta.custom_data?.user_email === 'string' 
+    ? webhookData.meta.custom_data.user_email 
+    : subscription.attributes.user_email;
+  
   const ends_at = subscription.attributes.ends_at ?? subscription.attributes.renews_at;
 
   if (!user_email) {
     console.error("No user email found in subscription data");
-    return;
+    throw Error("No user email found in subscription data");
   }
 
   const user = await db.user.findUnique({
@@ -59,7 +62,7 @@ async function handleSubscriptionCreated(subscriptionId: string) {
 
   if (!user) {
     console.error("User not found:", user_email);
-    return;
+    throw Error(`User not found: ${user_email}`);
   }
 
   console.log("Found user:", {
@@ -115,15 +118,9 @@ async function handleSubscriptionCreated(subscriptionId: string) {
   }
 }
 
-async function handleSubscriptionUpdated(subscriptionId: string) {
-  const { error, data } = await getSubscription(subscriptionId);
-  
-  if (error || !data?.data) {
-    console.error("Error fetching subscription:", error);
-    throw Error("Error fetching subscription");
-  }
-
-  const subscription = data.data;
+async function handleSubscriptionUpdated(webhookData: LemonSqueezyWebhookBody) {
+  const subscriptionId = webhookData.data.id;
+  const subscription = webhookData.data;
   const { status } = subscription.attributes;
   const ends_at = subscription.attributes.ends_at ?? subscription.attributes.renews_at;
 
@@ -144,13 +141,6 @@ async function handleSubscriptionUpdated(subscriptionId: string) {
 }
 
 async function handleSubscriptionCancelled(subscriptionId: string) {
-  const { error } = await cancelSubscription(subscriptionId);
-  
-  if (error) {
-    console.error("Error cancelling subscription in Lemon Squeezy:", error);
-    throw error;
-  }
-
   try {
     const cancelled = await db.subscription.update({
       where: { lemonSqueezyId: subscriptionId },
@@ -196,10 +186,10 @@ export async function POST(req: Request) {
 
     switch (eventName) {
       case "subscription_created":
-        await handleSubscriptionCreated(subscriptionId);
+        await handleSubscriptionCreated(body);
         break;
       case "subscription_updated":
-        await handleSubscriptionUpdated(subscriptionId);
+        await handleSubscriptionUpdated(body);
         break;
       case "subscription_cancelled":
         await handleSubscriptionCancelled(subscriptionId);
