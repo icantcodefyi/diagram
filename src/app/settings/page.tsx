@@ -168,7 +168,7 @@ export default function SettingsPage() {
               </div>
               {!isPro && (
                 <Button
-                  onClick={() => router.push("/#pricing")}
+                  onClick={() => router.push("/pricing")}
                   className="gap-1"
                 >
                   <Crown className="h-4 w-4" />
