@@ -64,17 +64,11 @@ model VerificationToken {
     @@unique([identifier, token])
 }
 
-enum DiagramType {
-    MERMAID
-    EXCALIDRAW
-}
-
 model Diagram {
     id            String         @id @default(cuid())
     prompt        String         @db.Text
     code          String         @db.Text
     type          String
-    diagramType   DiagramType
     isComplex     Boolean        @default(false)
     createdAt     DateTime       @default(now())
     updatedAt     DateTime       @updatedAt

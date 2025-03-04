@@ -13,6 +13,7 @@ import {
 import { db } from "@/server/db";
 import { validateMermaidDiagram as validateMermaid } from "@/server/services/mermaid-validation.service";
 import { validateAndUpdateUserCredits } from "@/server/services/credits.service";
+import { createThreadWithPrompt } from "@/server/services/thread.service";
 
 // Input schemas
 const generateDiagramSchema = z.object({
@@ -122,14 +123,13 @@ export const aiRouter = createTRPCRouter({
             });
           }
         } else if (ctx.session?.user?.id) {
-          // If no threadId is provided and user is logged in, create a new thread
-          const thread = await db.diagramThread.create({
-            data: {
-              name: generatedTitle,
-              userId: ctx.session.user.id,
-            },
-          });
-          input.threadId = thread.id;
+          // If no threadId is provided and user is logged in, create a new thread with prompt
+          const threadResult = await createThreadWithPrompt(
+            ctx.session.user.id,
+            input.text,
+            input.isComplex ?? false
+          );
+          input.threadId = threadResult.thread.id;
         }
 
         // If parentId is provided, verify it exists and belongs to the same thread
@@ -155,7 +155,6 @@ export const aiRouter = createTRPCRouter({
             prompt: input.text,
             code: validDiagram,
             type: suggestedType,
-            diagramType: "MERMAID",
             isComplex: input.isComplex ?? false,
             userId: ctx.session?.user?.id,
             anonymousId: !ctx.session?.user ? input.anonymousId : undefined,

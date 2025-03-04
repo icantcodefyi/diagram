@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { determineDiagramType, generateDiagramWithAI, generateDiagramTitle } from "@/lib/ai-utils";
+import { validateMermaidDiagram as validateMermaid } from "@/server/services/mermaid-validation.service";
+import { validateAndUpdateUserCredits } from "@/server/services/credits.service";
+import { createThreadWithPrompt } from "@/server/services/thread.service";
 
 export const threadRouter = createTRPCRouter({
   // Get all threads for the current user
@@ -52,7 +56,19 @@ export const threadRouter = createTRPCRouter({
       return thread;
     }),
 
-  // Create a new thread
+  // Create a new thread with a prompt
+  createThreadWithPrompt: protectedProcedure
+    .input(
+      z.object({
+        prompt: z.string().min(1, "Please provide text to generate a diagram"),
+        isComplex: z.boolean().optional().default(false),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return createThreadWithPrompt(ctx.session.user.id, input.prompt, input.isComplex ?? false);
+    }),
+
+  // Create a new thread (simplified version for manual thread creation)
   createThread: protectedProcedure
     .input(
       z.object({
