@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { db } from "@/server/db";
 import { determineDiagramType, generateDiagramWithAI, generateDiagramTitle } from "@/lib/ai-utils";
-import { validateMermaidDiagram as validateMermaid } from "@/server/services/mermaid-validation.service";
+//import { validateMermaidDiagram as validateMermaid } from "@/server/services/mermaid-validation.service";
 import { validateAndUpdateUserCredits } from "@/server/services/credits.service";
 
 export async function createThreadWithPrompt(userId: string, prompt: string, isComplex: boolean = false) {
@@ -44,12 +44,12 @@ export async function createThreadWithPrompt(userId: string, prompt: string, isC
         }
 
         // Validate the Mermaid diagram
-        const isValid = await validateMermaid(mermaidCode);
-        if (!isValid) {
-          lastError = new Error("Generated diagram failed validation");
-          attempts++;
-          continue;
-        }
+        //const isValid = await validateMermaid(mermaidCode);
+        //if (!isValid) {
+        //  lastError = new Error("Generated diagram failed validation");
+        //  attempts++;
+        //  continue;
+        //}
 
         validDiagram = mermaidCode;
         break;

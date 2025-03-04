@@ -1,47 +1,94 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+} from "@/server/api/trpc";
+import { db } from "@/server/db";
+import { createThreadWithPrompt } from "@/server/services/thread.service";
 import { determineDiagramType, generateDiagramWithAI, generateDiagramTitle } from "@/lib/ai-utils";
 import { validateMermaidDiagram as validateMermaid } from "@/server/services/mermaid-validation.service";
 import { validateAndUpdateUserCredits } from "@/server/services/credits.service";
-import { createThreadWithPrompt } from "@/server/services/thread.service";
+
+// Input schemas
+const createThreadSchema = z.object({
+  prompt: z.string().min(1, "Please provide text to generate a diagram"),
+  isComplex: z.boolean().optional().default(false),
+});
+
+const getThreadSchema = z.object({
+  threadId: z.string().min(1, "Thread ID is required"),
+});
+
+const generateDiagramSchema = z.object({
+  threadId: z.string().min(1, "Thread ID is required"),
+  prompt: z.string().min(1, "Please provide text to generate a diagram"),
+  isComplex: z.boolean().optional().default(false),
+});
+
+const deleteThreadSchema = z.object({
+  threadId: z.string().min(1, "Thread ID is required"),
+});
 
 export const threadRouter = createTRPCRouter({
-  // Get all threads for the current user
-  getUserThreads: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.db.diagramThread.findMany({
-      where: {
-        userId: ctx.session.user.id,
-      },
+  createThread: protectedProcedure
+    .input(createThreadSchema)
+    .mutation(async ({ input, ctx }) => {
+      try {
+        // Validate and update credits
+        await validateAndUpdateUserCredits(
+          ctx.session.user.id,
+          undefined,
+          input.isComplex ?? false,
+        );
+
+        // Create thread with initial diagram
+        const threadResult = await createThreadWithPrompt(
+          ctx.session.user.id,
+          input.prompt,
+          input.isComplex ?? false
+        );
+
+        return {
+          thread: threadResult.thread,
+          diagram: threadResult.diagram,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error instanceof Error ? error.message : "An unknown error occurred",
+        });
+      }
+    }),
+
+  getThreads: protectedProcedure.query(async ({ ctx }) => {
+    const threads = await db.diagramThread.findMany({
+      where: { userId: ctx.session.user.id },
       include: {
-        rootDiagram: true,
         diagrams: {
-          orderBy: {
-            createdAt: "desc",
-          },
+          orderBy: { createdAt: "desc" },
+          take: 1, // Get only the latest diagram
         },
       },
-      orderBy: {
-        updatedAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
     });
+    return threads;
   }),
 
-  // Get a single thread with all its diagrams
   getThread: protectedProcedure
-    .input(z.object({ threadId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      const thread = await ctx.db.diagramThread.findFirst({
+    .input(getThreadSchema)
+    .query(async ({ input, ctx }) => {
+      const thread = await db.diagramThread.findFirst({
         where: {
           id: input.threadId,
           userId: ctx.session.user.id,
         },
         include: {
-          rootDiagram: true,
           diagrams: {
-            orderBy: {
-              createdAt: "desc",
-            },
+            orderBy: { createdAt: "desc" },
           },
         },
       });
@@ -56,227 +103,160 @@ export const threadRouter = createTRPCRouter({
       return thread;
     }),
 
-  // Create a new thread with a prompt
-  createThreadWithPrompt: protectedProcedure
-    .input(
-      z.object({
-        prompt: z.string().min(1, "Please provide text to generate a diagram"),
-        isComplex: z.boolean().optional().default(false),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      return createThreadWithPrompt(ctx.session.user.id, input.prompt, input.isComplex ?? false);
-    }),
+  generateDiagram: protectedProcedure
+    .input(generateDiagramSchema)
+    .mutation(async ({ input, ctx }) => {
+      try {
+        // Validate and update credits
+        await validateAndUpdateUserCredits(
+          ctx.session.user.id,
+          undefined,
+          input.isComplex ?? false,
+        );
 
-  // Create a new thread (simplified version for manual thread creation)
-  createThread: protectedProcedure
-    .input(
-      z.object({
-        name: z.string().optional(),
-        rootDiagramId: z.string().optional(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      // If rootDiagramId is provided, verify it belongs to the user
-      if (input.rootDiagramId) {
-        const diagram = await ctx.db.diagram.findFirst({
+        // Verify thread ownership
+        const thread = await db.diagramThread.findFirst({
           where: {
-            id: input.rootDiagramId,
+            id: input.threadId,
             userId: ctx.session.user.id,
           },
         });
 
-        if (!diagram) {
+        if (!thread) {
           throw new TRPCError({
             code: "NOT_FOUND",
-            message: "Root diagram not found or unauthorized",
+            message: "Thread not found or unauthorized",
           });
         }
-      }
 
-      return ctx.db.diagramThread.create({
-        data: {
-          name: input.name,
-          userId: ctx.session.user.id,
-          rootDiagramId: input.rootDiagramId,
-        },
-        include: {
-          rootDiagram: true,
-        },
-      });
-    }),
+        let attempts = 0;
+        const maxAttempts = 5;
+        let validDiagram = "";
+        let lastError: Error | null = null;
 
-  // Update a thread
-  updateThread: protectedProcedure
-    .input(
-      z.object({
-        threadId: z.string(),
-        name: z.string().optional(),
-        rootDiagramId: z.string().optional(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const { threadId, ...updateData } = input;
+        // Use AI to determine the most suitable diagram type and validate input
+        const diagramTypeResult = await determineDiagramType(input.prompt);
 
-      // Verify thread ownership
-      const thread = await ctx.db.diagramThread.findFirst({
-        where: {
-          id: threadId,
-          userId: ctx.session.user.id,
-        },
-      });
+        if (!diagramTypeResult.isValid) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: diagramTypeResult.error ?? "Invalid input for diagram generation",
+          });
+        }
 
-      if (!thread) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Thread not found or unauthorized",
-        });
-      }
+        const suggestedType = diagramTypeResult.type;
+        const enhancedText = diagramTypeResult.enhancedText;
 
-      // If updating rootDiagramId, verify the new diagram belongs to the user
-      if (updateData.rootDiagramId) {
-        const diagram = await ctx.db.diagram.findFirst({
-          where: {
-            id: updateData.rootDiagramId,
+        while (attempts < maxAttempts) {
+          try {
+            const mermaidCode = await generateDiagramWithAI(
+              enhancedText ?? input.prompt,
+              suggestedType,
+              attempts,
+              input.isComplex,
+              lastError?.message,
+            );
+
+            if (typeof mermaidCode !== "string") {
+              lastError = new Error("Invalid response format from AI");
+              attempts++;
+              continue;
+            }
+
+            // Validate the Mermaid diagram
+            const isValid = await validateMermaid(mermaidCode);
+            if (!isValid) {
+              lastError = new Error("Generated diagram failed validation");
+              attempts++;
+              continue;
+            }
+
+            validDiagram = mermaidCode;
+            break;
+          } catch (err) {
+            lastError = err instanceof Error ? err : new Error("Unknown error occurred");
+            console.error(`Attempt ${attempts + 1} failed:`, lastError);
+            attempts++;
+          }
+        }
+
+        if (!validDiagram) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Failed to generate a valid diagram after ${maxAttempts} attempts. Last error: ${lastError?.message ?? "Unknown error"}`,
+          });
+        }
+
+        // Generate a title for the diagram
+        const generatedTitle = await generateDiagramTitle(
+          input.prompt,
+          suggestedType,
+        );
+
+        // Store the diagram
+        const diagram = await db.diagram.create({
+          data: {
+            prompt: input.prompt,
+            code: validDiagram,
+            type: suggestedType,
+            isComplex: input.isComplex ?? false,
             userId: ctx.session.user.id,
-          },
-        });
-
-        if (!diagram) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Root diagram not found or unauthorized",
-          });
-        }
-      }
-
-      return ctx.db.diagramThread.update({
-        where: { id: threadId },
-        data: updateData,
-        include: {
-          rootDiagram: true,
-        },
-      });
-    }),
-
-  // Delete a thread and all its diagrams
-  deleteThread: protectedProcedure
-    .input(z.object({ threadId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      // Verify thread ownership
-      const thread = await ctx.db.diagramThread.findFirst({
-        where: {
-          id: input.threadId,
-          userId: ctx.session.user.id,
-        },
-      });
-
-      if (!thread) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Thread not found or unauthorized",
-        });
-      }
-
-      // Delete the thread (this will cascade delete all diagrams in the thread)
-      await ctx.db.diagramThread.delete({
-        where: { id: input.threadId },
-      });
-
-      return { message: "Thread deleted successfully" };
-    }),
-
-  // Add a diagram to a thread
-  addDiagramToThread: protectedProcedure
-    .input(
-      z.object({
-        threadId: z.string(),
-        diagramId: z.string(),
-        parentId: z.string().optional(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      // Verify thread ownership
-      const thread = await ctx.db.diagramThread.findFirst({
-        where: {
-          id: input.threadId,
-          userId: ctx.session.user.id,
-        },
-      });
-
-      if (!thread) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Thread not found or unauthorized",
-        });
-      }
-
-      // Verify diagram ownership
-      const diagram = await ctx.db.diagram.findFirst({
-        where: {
-          id: input.diagramId,
-          userId: ctx.session.user.id,
-        },
-      });
-
-      if (!diagram) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Diagram not found or unauthorized",
-        });
-      }
-
-      // If parentId is provided, verify it belongs to the same thread
-      if (input.parentId) {
-        const parentDiagram = await ctx.db.diagram.findFirst({
-          where: {
-            id: input.parentId,
             threadId: input.threadId,
           },
         });
 
-        if (!parentDiagram) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Parent diagram not found in thread",
-          });
+        return {
+          diagram: validDiagram,
+          type: suggestedType,
+          message: `Successfully generated a ${suggestedType} diagram.`,
+          storedDiagram: diagram,
+          enhancedText: enhancedText,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
         }
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error instanceof Error ? error.message : "An unknown error occurred",
+        });
       }
-
-      return ctx.db.diagram.update({
-        where: { id: input.diagramId },
-        data: {
-          threadId: input.threadId,
-          parentId: input.parentId,
-        },
-      });
     }),
 
-  // Remove a diagram from a thread
-  removeDiagramFromThread: protectedProcedure
-    .input(z.object({ diagramId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
-      // Verify diagram ownership
-      const diagram = await ctx.db.diagram.findFirst({
+  deleteThread: protectedProcedure
+    .input(deleteThreadSchema)
+    .mutation(async ({ input, ctx }) => {
+      // First check if the thread exists and belongs to the user
+      const thread = await db.diagramThread.findFirst({
         where: {
-          id: input.diagramId,
+          id: input.threadId,
           userId: ctx.session.user.id,
         },
       });
 
-      if (!diagram) {
+      if (!thread) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Diagram not found or unauthorized",
+          message: "Thread not found or you don't have permission to delete it",
         });
       }
 
-      return ctx.db.diagram.update({
-        where: { id: input.diagramId },
-        data: {
-          threadId: null,
-          parentId: null,
+      // Delete all diagrams in the thread first
+      await db.diagram.deleteMany({
+        where: {
+          threadId: input.threadId,
         },
       });
+
+      // Then delete the thread
+      await db.diagramThread.delete({
+        where: {
+          id: input.threadId,
+        },
+      });
+
+      return {
+        message: "Thread and all associated diagrams deleted successfully",
+      };
     }),
 }); 
