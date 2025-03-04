@@ -41,24 +41,6 @@ export function Hero() {
   return (
     <section className="bg-gradient-to-b from-background via-secondary/20 via-70% pb-28 pt-20">
       <div className="container flex flex-col items-center gap-8 sm:gap-10">
-        <motion.div
-          animate={{ y: 0, opacity: 1 }}
-          initial={{ y: 5, opacity: 0 }}
-          transition={{ delay: 0.8, duration: 0.4 }}
-          className="flex cursor-pointer items-center gap-4 rounded-full px-4 py-1 font-medium text-secondary"
-        >
-          <Link
-            href="https://peerlist.io/aniruddh2/project/autodiagram"
-            target="_blank"
-          >
-            <Image
-              src="/Launch_SVG_Light.svg"
-              alt="AutoDiagram"
-              width={200}
-              height={16}
-            />
-          </Link>
-        </motion.div>
         <motion.h1
           animate={{ y: 0, opacity: 1 }}
           initial={{ y: 10, opacity: 0 }}

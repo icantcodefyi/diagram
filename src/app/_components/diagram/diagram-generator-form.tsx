@@ -312,7 +312,7 @@ export function DiagramGeneratorForm({
                             htmlFor="complex-mode"
                             className="cursor-pointer select-none text-sm text-muted-foreground"
                           >
-                            Generate detailed and sophisticated diagram
+                            Generate detailed diagram
                           </Label>
                         </div>
                       </TooltipTrigger>
