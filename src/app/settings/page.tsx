@@ -189,7 +189,7 @@ export default function SettingsPage() {
                     {isPro ? (
                       <>
                         <Crown className="h-3 w-3 text-accent" />
-                        500 Monthly + 10 Daily
+                        500 Monthly
                       </>
                     ) : (
                       "10 Daily"
