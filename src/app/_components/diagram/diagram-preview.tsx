@@ -16,11 +16,12 @@ import { renderMermaidDiagram } from "@/lib/mermaid-config";
 
 interface DiagramPreviewProps {
   diagram: string;
-  diagramType: DiagramType | null;
-  onUpdate?: (newContent: string) => void;
+  diagramType: string | null;
+  onUpdate: (newDiagram: string) => void;
+  prompt?: string;
 }
 
-export function DiagramPreview({ diagram, diagramType, onUpdate }: DiagramPreviewProps) {
+export function DiagramPreview({ diagram, diagramType, onUpdate, prompt }: DiagramPreviewProps) {
   const {
     currentTheme,
     scale,
@@ -87,45 +88,64 @@ export function DiagramPreview({ diagram, diagramType, onUpdate }: DiagramPrevie
         )}
       </CardHeader>
       <CardContent>
-        <div className="relative rounded-lg bg-white p-4 dark:bg-slate-900">
-          <div
-            className="flex min-h-[500px] items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
-            style={{
-              position: 'relative',
-              width: '100%',
-            }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onWheel={handleWheel}
-          >
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Left side - Diagram */}
+          <div className="relative rounded-lg bg-white p-4 dark:bg-slate-900">
             <div
+              className="flex min-h-[500px] items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
               style={{
-                transformOrigin: "center center",
-                transition: isDragging ? "none" : "transform 0.2s ease-in-out",
-                position: 'absolute',
-                left: '50%',
-                top: '50%',
-                transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`,
+                position: 'relative',
+                width: '100%',
               }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onWheel={handleWheel}
             >
-              <div id="mermaid-diagram" />
+              <div
+                style={{
+                  transformOrigin: "center center",
+                  transition: isDragging ? "none" : "transform 0.2s ease-in-out",
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`,
+                }}
+              >
+                <div id="mermaid-diagram" />
+              </div>
+            </div>
+            <DiagramControls
+              className="absolute right-4 top-4 z-10"
+              content={diagram}
+              diagramId="mermaid-diagram"
+              type={diagramType ?? "diagram"}
+              currentTheme={currentTheme}
+              onThemeChange={handleThemeChange}
+              onCopy={handleCopyToClipboard}
+              onZoomIn={zoomIn}
+              onZoomOut={zoomOut}
+              onResetZoom={resetZoom}
+              onContentUpdate={onUpdate}
+            />
+          </div>
+
+          {/* Right side - Prompt */}
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-card p-4">
+              <h3 className="font-semibold mb-2">Prompt</h3>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {prompt || "No prompt available"}
+              </p>
+            </div>
+            <div className="rounded-lg border bg-card p-4">
+              <h3 className="font-semibold mb-2">Mermaid Code</h3>
+              <pre className="text-sm bg-muted p-4 rounded-lg overflow-auto">
+                <code>{diagram}</code>
+              </pre>
             </div>
           </div>
-          <DiagramControls
-            className="absolute right-4 top-4 z-10"
-            content={diagram}
-            diagramId="mermaid-diagram"
-            type={diagramType ?? "diagram"}
-            currentTheme={currentTheme}
-            onThemeChange={handleThemeChange}
-            onCopy={handleCopyToClipboard}
-            onZoomIn={zoomIn}
-            onZoomOut={zoomOut}
-            onResetZoom={resetZoom}
-            onContentUpdate={onUpdate}
-          />
         </div>
       </CardContent>
     </Card>

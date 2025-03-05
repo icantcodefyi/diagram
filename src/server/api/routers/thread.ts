@@ -103,7 +103,7 @@ export const threadRouter = createTRPCRouter({
       return thread;
     }),
 
-  generateDiagram: protectedProcedure
+  createDiagramInThread: protectedProcedure
     .input(generateDiagramSchema)
     .mutation(async ({ input, ctx }) => {
       try {
@@ -129,13 +129,32 @@ export const threadRouter = createTRPCRouter({
           });
         }
 
+        // Get the previous diagram
+        const previousDiagram = await db.diagram.findFirst({
+          where: {
+            threadId: input.threadId,
+          },
+          orderBy: {
+            createdAt: 'desc'
+          }
+        });
+
         let attempts = 0;
         const maxAttempts = 5;
         let validDiagram = "";
         let lastError: Error | null = null;
 
+        const prompt = `Based on the following prompt and the previous diagram, generate a new diagram that builds upon or modifies the existing one:
+
+User's Request: "${input.prompt}"
+
+Previous Diagram (${previousDiagram?.type ?? 'unknown type'}):
+\`\`\`mermaid
+${previousDiagram?.code ?? 'No previous diagram'}
+\`\`\``;
+
         // Use AI to determine the most suitable diagram type and validate input
-        const diagramTypeResult = await determineDiagramType(input.prompt);
+        const diagramTypeResult = await determineDiagramType(prompt);
 
         if (!diagramTypeResult.isValid) {
           throw new TRPCError({
@@ -186,12 +205,6 @@ export const threadRouter = createTRPCRouter({
             message: `Failed to generate a valid diagram after ${maxAttempts} attempts. Last error: ${lastError?.message ?? "Unknown error"}`,
           });
         }
-
-        // Generate a title for the diagram
-        const generatedTitle = await generateDiagramTitle(
-          input.prompt,
-          suggestedType,
-        );
 
         // Store the diagram
         const diagram = await db.diagram.create({

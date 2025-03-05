@@ -6,10 +6,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { MessageSquare, Trash2 } from "lucide-react";
 
 interface ThreadHistoryProps {
   threadId: string;
-  onDiagramSelect: (diagram: string, type: string) => void;
+  onDiagramSelect: (diagram: string, type: string, prompt: string) => void;
 }
 
 export function ThreadHistory({ threadId, onDiagramSelect }: ThreadHistoryProps) {
@@ -36,19 +37,23 @@ export function ThreadHistory({ threadId, onDiagramSelect }: ThreadHistoryProps)
   };
 
   return (
-    <div className="w-64 space-y-4 rounded-lg border p-4">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold">Thread History</h3>
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-4 w-4" />
+          <h3 className="font-semibold">Chat History</h3>
+        </div>
         <Button
-          variant="destructive"
+          variant="ghost"
           size="sm"
           onClick={handleDeleteThread}
           disabled={isLoading}
+          className="text-destructive hover:text-destructive"
         >
-          Delete Thread
+          <Trash2 className="h-4 w-4" />
         </Button>
       </div>
-      <ScrollArea className="h-[600px]">
+      <ScrollArea className="h-[calc(100vh-16rem)]">
         <div className="space-y-4">
           {isLoading ? (
             <div className="text-sm text-muted-foreground">Loading...</div>
@@ -60,19 +65,35 @@ export function ThreadHistory({ threadId, onDiagramSelect }: ThreadHistoryProps)
                 key={diagram.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className={`cursor-pointer rounded-lg border p-3 transition-colors ${
+                className={`group relative cursor-pointer rounded-lg border p-3 transition-colors ${
                   selectedDiagramId === diagram.id
                     ? "border-primary bg-primary/5"
                     : "hover:bg-muted"
                 }`}
                 onClick={() => {
                   setSelectedDiagramId(diagram.id);
-                  onDiagramSelect(diagram.code, diagram.type);
+                  onDiagramSelect(diagram.code, diagram.type, diagram.prompt);
                 }}
               >
-                <div className="text-sm font-medium">{diagram.prompt}</div>
-                <div className="mt-1 text-xs text-muted-foreground">
-                  {new Date(diagram.createdAt).toLocaleDateString()}
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                    <span className="text-xs font-medium text-primary">
+                      {diagram.type.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <div className="text-sm font-medium line-clamp-2">
+                      {diagram.prompt}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(diagram.createdAt).toLocaleDateString()}
+                      </div>
+                      <div className="text-xs font-medium text-primary">
+                        {diagram.type}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             ))
