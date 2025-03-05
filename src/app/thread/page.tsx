@@ -23,6 +23,11 @@ export default function ThreadPage() {
   const [currentPrompt, setCurrentPrompt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const { data: thread } = api.thread.getThread.useQuery(
+    { threadId: threadId! },
+    { enabled: !!threadId }
+  );
+
   const createThreadWithPrompt = api.thread.createThread.useMutation({
     onSuccess: (data) => {
       setThreadId(data.thread.id);
@@ -75,12 +80,6 @@ export default function ThreadPage() {
     }
   };
 
-  const handleDiagramSelect = (diagram: string, type: string, prompt: string) => {
-    setCurrentDiagram(diagram);
-    setDiagramType(type);
-    setCurrentPrompt(prompt);
-  };
-
   return (
     <div className="flex h-screen">
       {/* Left sidebar with threads */}
@@ -104,75 +103,60 @@ export default function ThreadPage() {
         </div>
       </div>
 
-      {/* Main content area */}
-      <div className="flex flex-1">
-        {/* Chat history */}
-        <div className="w-80 border-r bg-background p-4">
+      {/* Main chat area */}
+      <div className="flex-1 flex flex-col h-screen">
+        {/* Messages area */}
+        <div className="flex-1 overflow-y-auto p-4">
           {threadId ? (
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-8"
             >
-              <ThreadHistory
-                threadId={threadId}
-                onDiagramSelect={handleDiagramSelect}
-              />
+              {thread?.diagrams.map((diagram, index) => (
+                <div key={diagram.id} className="space-y-4">
+                  {/* Prompt message */}
+                  <div className="flex justify-end">
+                    <div className="bg-primary/10 rounded-lg p-4 max-w-[60%]">
+                      <p className="text-sm">{diagram.prompt}</p>
+                    </div>
+                  </div>
+                  {/* Diagram response */}
+                  <div className="flex justify-start">
+                    <div className="bg-muted rounded-lg p-8 w-full">
+                      <DiagramPreview
+                        diagram={diagram.code}
+                        diagramType={diagram.type}
+                        onUpdate={(newCode) => {
+                          // Handle diagram update if needed
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </motion.div>
           ) : (
-            <div className="flex h-full items-center justify-center">
-              <p className="text-sm text-muted-foreground">Select a thread to view chat history</p>
+            <div className="h-full flex items-center justify-center">
+              <p className="text-muted-foreground">Select a thread or create a new one to start</p>
             </div>
           )}
         </div>
 
-        {/* Diagram and prompt area */}
-        <div className="flex-1 overflow-auto p-6">
-          <div className="max-w-4xl mx-auto space-y-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <label htmlFor="prompt" className="text-sm font-medium">
-                    {threadId ? "Add to thread" : "Create new thread"}
-                  </label>
-                  <Textarea
-                    id="prompt"
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Enter your diagram description..."
-                    className="min-h-[100px]"
-                    disabled={isLoading}
-                  />
-                </div>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading
-                    ? "Generating..."
-                    : threadId
-                    ? "Add to Thread"
-                    : "Create Thread"}
-                </Button>
-              </form>
-            </motion.div>
-
-            {currentDiagram && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <DiagramPreview
-                  diagram={currentDiagram}
-                  diagramType={diagramType}
-                  onUpdate={setCurrentDiagram}
-                  prompt={currentPrompt ?? undefined}
-                />
-              </motion.div>
-            )}
-          </div>
+        {/* Input area */}
+        <div className="border-t bg-background p-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Describe your diagram..."
+              className="min-h-[60px] resize-none"
+              disabled={isLoading}
+            />
+            <Button type="submit" disabled={isLoading} className="w-full">
+              {isLoading ? "Generating..." : "Send"}
+            </Button>
+          </form>
         </div>
       </div>
 

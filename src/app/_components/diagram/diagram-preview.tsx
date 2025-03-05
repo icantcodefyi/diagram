@@ -90,12 +90,13 @@ export function DiagramPreview({ diagram, diagramType, onUpdate, prompt }: Diagr
       <CardContent>
         <div className="grid gap-6 md:grid-cols-2">
           {/* Left side - Diagram */}
-          <div className="relative rounded-lg bg-white p-4 dark:bg-slate-900">
+          <div className="relative rounded-lg bg-white p-6 dark:bg-slate-900">
             <div
-              className="flex min-h-[500px] items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
+              className="flex min-h-[400px] items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
               style={{
                 position: 'relative',
                 width: '100%',
+                margin: '20px 0',
               }}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
@@ -111,6 +112,7 @@ export function DiagramPreview({ diagram, diagramType, onUpdate, prompt }: Diagr
                   left: '50%',
                   top: '50%',
                   transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`,
+                  padding: '20px',
                 }}
               >
                 <div id="mermaid-diagram" />
