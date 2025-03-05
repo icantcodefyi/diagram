@@ -17,9 +17,9 @@ export const THEMES: { label: string; value: MermaidTheme }[] = [
 ];
 
 const ZOOM_STEP = 0.25;
-const MIN_ZOOM = 0.5;
+const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 5;
-const DEFAULT_SCALE = 3;
+const DEFAULT_SCALE = 1;
 
 interface UseDiagramPreviewProps {
   diagram: string;
@@ -42,27 +42,23 @@ export function useDiagramPreview({
     }
 
     const adjustScale = () => {
-      const container = document.getElementById(diagramId)?.parentElement;
+      const container = document.getElementById(diagramId)?.parentElement?.parentElement?.parentElement;
       const diagram = document.getElementById(diagramId);
 
       if (container && diagram) {
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight;
+        const containerWidth = container.clientWidth - 40; // Account for padding
+        const containerHeight = container.clientHeight - 40;
         const diagramWidth = diagram.scrollWidth;
         const diagramHeight = diagram.scrollHeight;
 
-        // Only adjust if diagram is too large at DEFAULT_SCALE (300%)
-        if (
-          diagramWidth * DEFAULT_SCALE > containerWidth * 0.95 ||
-          diagramHeight * DEFAULT_SCALE > containerHeight * 0.95
-        ) {
-          const scaleX = (containerWidth * 0.95) / diagramWidth;
-          const scaleY = (containerHeight * 0.95) / diagramHeight;
-          const newScale = Math.min(
-            Math.max(Math.min(scaleX, scaleY) * 3, MIN_ZOOM),
-            DEFAULT_SCALE,
-          );
-          setScale(newScale);
+        // Calculate scale to fit both width and height
+        const scaleX = containerWidth / diagramWidth;
+        const scaleY = containerHeight / diagramHeight;
+        const newScale = Math.min(scaleX, scaleY, 1); // Don't scale up beyond 1
+
+        // Only adjust if diagram is too large
+        if (newScale < 1) {
+          setScale(Math.max(newScale * 0.9, MIN_ZOOM)); // Add 10% margin
         }
 
         hasAutoAdjusted.current = true;

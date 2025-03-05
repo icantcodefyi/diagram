@@ -19,9 +19,10 @@ interface DiagramPreviewProps {
   diagramType: string | null;
   onUpdate: (newDiagram: string) => void;
   prompt?: string;
+  diagramId: string;
 }
 
-export function DiagramPreview({ diagram, diagramType, onUpdate, prompt }: DiagramPreviewProps) {
+export function DiagramPreview({ diagram, diagramType, onUpdate, prompt, diagramId }: DiagramPreviewProps) {
   const {
     currentTheme,
     scale,
@@ -32,7 +33,7 @@ export function DiagramPreview({ diagram, diagramType, onUpdate, prompt }: Diagr
     resetZoom,
   } = useDiagramPreview({
     diagram,
-    diagramId: "mermaid-diagram",
+    diagramId,
   });
 
   const [isDragging, setIsDragging] = useState(false);
@@ -73,8 +74,8 @@ export function DiagramPreview({ diagram, diagramType, onUpdate, prompt }: Diagr
 
   // Initial render and theme changes
   useEffect(() => {
-    void renderMermaidDiagram(diagram, "#mermaid-diagram");
-  }, [diagram, currentTheme]);
+    void renderMermaidDiagram(diagram, `#${diagramId}`);
+  }, [diagram, currentTheme, diagramId]);
 
   return (
     <Card className="relative">
@@ -115,13 +116,13 @@ export function DiagramPreview({ diagram, diagramType, onUpdate, prompt }: Diagr
                   padding: '20px',
                 }}
               >
-                <div id="mermaid-diagram" />
+                <div id={diagramId} />
               </div>
             </div>
             <DiagramControls
               className="absolute right-4 top-4 z-10"
               content={diagram}
-              diagramId="mermaid-diagram"
+              diagramId={diagramId}
               type={diagramType ?? "diagram"}
               currentTheme={currentTheme}
               onThemeChange={handleThemeChange}

@@ -133,6 +133,7 @@ export default function ThreadPage() {
                           diagram={diagram.code}
                           diagramType={diagram.type}
                           prompt={diagram.prompt}
+                          diagramId={`mermaid-diagram-${diagram.id}`}
                           onUpdate={(newCode) => {
                             if (threadId) {
                               createDiagramInThread.mutate({
