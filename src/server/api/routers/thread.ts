@@ -9,6 +9,14 @@ import { createThreadWithPrompt } from "@/server/services/thread.service";
 import { determineDiagramType, generateDiagramWithAI, generateDiagramTitle } from "@/lib/ai-utils";
 import { validateMermaidDiagram as validateMermaid } from "@/server/services/mermaid-validation.service";
 import { validateAndUpdateUserCredits } from "@/server/services/credits.service";
+import { generateDiagramWithAI as generateDiagramWithAI_lib } from "@/lib/ai/diagram-generator";
+import type { DiagramResponse } from "@/lib/ai/types";
+
+interface DiagramAIResponse {
+  diagram: string;
+  type: string;
+  message?: string;
+}
 
 // Input schemas
 const createThreadSchema = z.object({
@@ -104,136 +112,73 @@ export const threadRouter = createTRPCRouter({
     }),
 
   createDiagramInThread: protectedProcedure
-    .input(generateDiagramSchema)
-    .mutation(async ({ input, ctx }) => {
-      try {
-        // Validate and update credits
-        await validateAndUpdateUserCredits(
-          ctx.session.user.id,
-          undefined,
-          input.isComplex ?? false,
-        );
+    .input(
+      z.object({
+        threadId: z.string(),
+        prompt: z.string(),
+        isComplex: z.boolean().optional(),
+        code: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Verify thread ownership
+      const thread = await ctx.db.diagramThread.findFirst({
+        where: {
+          id: input.threadId,
+          userId: ctx.session.user.id,
+        },
+      });
 
-        // Verify thread ownership
-        const thread = await db.diagramThread.findFirst({
-          where: {
-            id: input.threadId,
-            userId: ctx.session.user.id,
-          },
-        });
-
-        if (!thread) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Thread not found or unauthorized",
-          });
-        }
-
-        // Get the previous diagram
-        const previousDiagram = await db.diagram.findFirst({
-          where: {
-            threadId: input.threadId,
-          },
-          orderBy: {
-            createdAt: 'desc'
-          }
-        });
-
-        let attempts = 0;
-        const maxAttempts = 5;
-        let validDiagram = "";
-        let lastError: Error | null = null;
-
-        const prompt = `Based on the following prompt and the previous diagram, generate a new diagram that builds upon or modifies the existing one:
-
-User's Request: "${input.prompt}"
-
-Previous Diagram (${previousDiagram?.type ?? 'unknown type'}):
-\`\`\`mermaid
-${previousDiagram?.code ?? 'No previous diagram'}
-\`\`\``;
-
-        // Use AI to determine the most suitable diagram type and validate input
-        const diagramTypeResult = await determineDiagramType(prompt);
-
-        if (!diagramTypeResult.isValid) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: diagramTypeResult.error ?? "Invalid input for diagram generation",
-          });
-        }
-
-        const suggestedType = diagramTypeResult.type;
-        const enhancedText = diagramTypeResult.enhancedText;
-
-        while (attempts < maxAttempts) {
-          try {
-            const mermaidCode = await generateDiagramWithAI(
-              enhancedText ?? input.prompt,
-              suggestedType,
-              attempts,
-              input.isComplex,
-              lastError?.message,
-            );
-
-            if (typeof mermaidCode !== "string") {
-              lastError = new Error("Invalid response format from AI");
-              attempts++;
-              continue;
-            }
-
-            // Validate the Mermaid diagram
-            const isValid = await validateMermaid(mermaidCode);
-            if (!isValid) {
-              lastError = new Error("Generated diagram failed validation");
-              attempts++;
-              continue;
-            }
-
-            validDiagram = mermaidCode;
-            break;
-          } catch (err) {
-            lastError = err instanceof Error ? err : new Error("Unknown error occurred");
-            console.error(`Attempt ${attempts + 1} failed:`, lastError);
-            attempts++;
-          }
-        }
-
-        if (!validDiagram) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: `Failed to generate a valid diagram after ${maxAttempts} attempts. Last error: ${lastError?.message ?? "Unknown error"}`,
-          });
-        }
-
-        // Store the diagram
-        const diagram = await db.diagram.create({
-          data: {
-            prompt: input.prompt,
-            code: validDiagram,
-            type: suggestedType,
-            isComplex: input.isComplex ?? false,
-            userId: ctx.session.user.id,
-            threadId: input.threadId,
-          },
-        });
-
-        return {
-          diagram: validDiagram,
-          type: suggestedType,
-          message: `Successfully generated a ${suggestedType} diagram.`,
-          storedDiagram: diagram,
-          enhancedText: enhancedText,
-        };
-      } catch (error) {
-        if (error instanceof TRPCError) {
-          throw error;
-        }
+      if (!thread) {
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: error instanceof Error ? error.message : "An unknown error occurred",
+          code: "NOT_FOUND",
+          message: "Thread not found or unauthorized",
         });
       }
+
+      let diagramCode: string;
+      let diagramType: string;
+
+      if (input.code) {
+        // If code is provided, use it directly
+        diagramCode = input.code;
+        diagramType = "flowchart"; // Default type
+      } else {
+        // Generate new diagram using AI
+        try {
+          const result = await generateDiagramWithAI_lib(input.prompt, "flowchart", 0, input.isComplex);
+          if (typeof result === 'string') {
+            diagramCode = result;
+            diagramType = "flowchart";
+          } else {
+            diagramCode = result.diagram;
+            diagramType = result.type;
+          }
+        } catch (error) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: error instanceof Error ? error.message : "Failed to generate diagram",
+          });
+        }
+      }
+
+      // Create the new diagram
+      const storedDiagram = await ctx.db.diagram.create({
+        data: {
+          prompt: input.prompt,
+          code: diagramCode,
+          type: diagramType,
+          isComplex: input.isComplex ?? false,
+          userId: ctx.session.user.id,
+          threadId: input.threadId,
+        },
+      });
+
+      return {
+        diagram: diagramCode,
+        type: diagramType,
+        storedDiagram,
+      };
     }),
 
   deleteThread: protectedProcedure

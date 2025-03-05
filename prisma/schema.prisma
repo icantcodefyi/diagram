@@ -77,28 +77,21 @@ model Diagram {
     anonymousId   String?
     thread        DiagramThread? @relation("ThreadDiagrams", fields: [threadId], references: [id])
     threadId      String?
-    parentDiagram Diagram?       @relation("DiagramVersions", fields: [parentId], references: [id])
-    parentId      String?
-    childDiagrams Diagram[]      @relation("DiagramVersions")
     isSaved       Boolean        @default(false)
-    asRootDiagram DiagramThread? @relation("ThreadRoot")
 
     @@index([userId])
     @@index([anonymousId])
     @@index([threadId])
-    @@index([parentId])
 }
 
 model DiagramThread {
-    id            String    @id @default(cuid())
-    name          String?
-    createdAt     DateTime  @default(now())
-    updatedAt     DateTime  @updatedAt
-    user          User?     @relation(fields: [userId], references: [id])
-    userId        String?
-    diagrams      Diagram[] @relation("ThreadDiagrams")
-    rootDiagram   Diagram?  @relation("ThreadRoot", fields: [rootDiagramId], references: [id])
-    rootDiagramId String?   @unique
+    id        String    @id @default(cuid())
+    name      String?
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt
+    user      User?     @relation(fields: [userId], references: [id])
+    userId    String?
+    diagrams  Diagram[] @relation("ThreadDiagrams")
 
     @@index([userId])
 }

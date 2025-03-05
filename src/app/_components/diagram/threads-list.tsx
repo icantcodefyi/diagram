@@ -66,7 +66,7 @@ export function ThreadsList({ onThreadSelect, selectedThreadId }: ThreadsListPro
                 onClick={() => onThreadSelect(thread.id)}
               >
                 <div className="text-sm font-medium line-clamp-2">
-                  {thread.diagrams[0]?.prompt || "Untitled Thread"}
+                  {thread.name || thread.diagrams[0]?.prompt || "Untitled Thread"}
                 </div>
                 <div className="mt-2 flex items-center justify-between">
                   <div className="text-xs text-muted-foreground">

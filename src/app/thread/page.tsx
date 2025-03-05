@@ -46,7 +46,7 @@ export default function ThreadPage() {
 
   const createDiagramInThread = api.thread.createDiagramInThread.useMutation({
     onSuccess: (data) => {
-      setCurrentDiagram(data.diagram);
+      setCurrentDiagram(data.storedDiagram.code);
       setDiagramType(data.type);
       setCurrentPrompt(data.storedDiagram.prompt);
       setIsLoading(false);
@@ -79,6 +79,8 @@ export default function ThreadPage() {
       });
     }
   };
+
+  console.log("thread", thread);
 
   return (
     <div className="flex h-screen">
@@ -113,28 +115,39 @@ export default function ThreadPage() {
               animate={{ opacity: 1 }}
               className="space-y-8"
             >
-              {thread?.diagrams.map((diagram, index) => (
-                <div key={diagram.id} className="space-y-4">
-                  {/* Prompt message */}
-                  <div className="flex justify-end">
-                    <div className="bg-primary/10 rounded-lg p-4 max-w-[60%]">
-                      <p className="text-sm">{diagram.prompt}</p>
+              {thread?.diagrams
+                .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                .map((diagram) => (
+                  <div key={diagram.id} className="space-y-4">
+                    {/* Prompt message */}
+                    <div className="flex justify-end">
+                      <div className="bg-primary/10 rounded-lg p-4 max-w-[60%]">
+                        <p className="text-sm">{diagram.prompt}</p>
+                      </div>
+                    </div>
+                    {/* Diagram response */}
+                    <div className="flex justify-start">
+                      <div className="bg-muted rounded-lg p-8 w-full">
+                        <DiagramPreview
+                          key={`${diagram.id}-preview`}
+                          diagram={diagram.code}
+                          diagramType={diagram.type}
+                          prompt={diagram.prompt}
+                          onUpdate={(newCode) => {
+                            if (threadId) {
+                              createDiagramInThread.mutate({
+                                threadId,
+                                prompt: diagram.prompt,
+                                isComplex: diagram.isComplex,
+                                code: newCode,
+                              });
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
-                  {/* Diagram response */}
-                  <div className="flex justify-start">
-                    <div className="bg-muted rounded-lg p-8 w-full">
-                      <DiagramPreview
-                        diagram={diagram.code}
-                        diagramType={diagram.type}
-                        onUpdate={(newCode) => {
-                          // Handle diagram update if needed
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
+                ))}
             </motion.div>
           ) : (
             <div className="h-full flex items-center justify-center">

@@ -11,7 +11,7 @@ export async function validateMermaidDiagram(code: string): Promise<boolean> {
 
     // Validate using mermaid-cli run function
     await run(tempFile, tempOutput);
-    
+
     // Clean up
     await fs.unlink(tempFile);
     await fs.unlink(tempOutput);
