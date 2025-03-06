@@ -5,6 +5,13 @@ import { validateAndUpdateUserCredits } from "@/server/services/credits.service"
 import { generateDiagramWithAI, determineDiagramType } from "@/lib/ai/diagram-generator";
 import type { DiagramType } from "@/types/diagram";
 import type { DiagramTypeResponse } from "@/lib/ai/types";
+import type { Diagram } from "@prisma/client";
+
+// Define recursive diagram type
+type DiagramWithChildren = Diagram & {
+  childDiagrams: DiagramWithChildren[];
+  parentDiagram?: DiagramWithChildren | null;
+};
 
 // Input schemas
 const generateNewDiagramSchema = z.object({
@@ -47,19 +54,33 @@ export const diagramRouter = createTRPCRouter({
   getDiagram: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
-      const diagram = await ctx.db.diagram.findFirst({
+      const getAllDescendants = async (diagramId: string): Promise<DiagramWithChildren[]> => {
+        const children = await ctx.db.diagram.findMany({
+          where: {
+            parentDiagramId: diagramId,
+            userId: ctx.session.user.id,
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        }) as DiagramWithChildren[];
+
+        for (const child of children) {
+          child.childDiagrams = await getAllDescendants(child.id);
+        }
+
+        return children;
+      };
+
+      // Get the main diagram
+      let diagram = await ctx.db.diagram.findFirst({
         where: {
           id: input.id,
           userId: ctx.session.user.id,
         },
         include: {
-          childDiagrams: {
-            orderBy: {
-              createdAt: 'asc',
-            },
-          },
           parentDiagram: true,
-        },
+        }
       });
 
       if (!diagram) {
@@ -69,22 +90,18 @@ export const diagramRouter = createTRPCRouter({
         });
       }
 
-      return diagram;
-    }),
+      // Convert to DiagramWithChildren and initialize childDiagrams
+      const diagramWithChildren: DiagramWithChildren = {
+        ...diagram,
+        childDiagrams: [],
+        parentDiagram: diagram.parentDiagram ? { ...diagram.parentDiagram, childDiagrams: [] } : null,
+      };
 
-  // Get child diagrams for a specific diagram
-  getChildDiagrams: protectedProcedure
-    .input(z.object({ diagramId: z.string() }))
-    .query(async ({ ctx, input }) => {
-      return ctx.db.diagram.findMany({
-        where: {
-          parentDiagramId: input.diagramId,
-          userId: ctx.session.user.id,
-        },
-        orderBy: {
-          createdAt: 'asc',
-        },
-      });
+      // Get all descendants
+      diagramWithChildren.childDiagrams = await getAllDescendants(diagram.id);
+
+      console.log("Diagram with children", JSON.stringify(diagramWithChildren, null, 2));
+      return diagramWithChildren;
     }),
 
   // Generate a new root diagram with AI

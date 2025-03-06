@@ -61,59 +61,65 @@ export function DiagramPreview({ diagram, diagramType, onUpdate, prompt, diagram
     }
   );
 
-  // Get all related diagrams (parent and children)
-  const [diagramSequence, setDiagramSequence] = useState<Array<{
+  type DiagramSequenceItem = {
     id: string;
     prompt: string;
     code: string;
     createdAt: Date;
     isParent?: boolean;
     parentDiagramId?: string;
-  }>>([]);
+    level: number;
+  };
 
-  console.log("Diagram Data", diagramData);
-  console.log("Diagram Sequence", diagramSequence);
+  const [diagramSequence, setDiagramSequence] = useState<DiagramSequenceItem[]>([]);
+
+  // Helper function to recursively flatten diagram hierarchy
+  const flattenDiagramHierarchy = (
+    diagram: {
+      id: string;
+      prompt: string;
+      code: string;
+      createdAt: string | Date;
+      parentDiagramId?: string | null;
+      childDiagrams?: any[];
+    },
+    level: number = 0,
+    isParent: boolean = false
+  ): DiagramSequenceItem[] => {
+    const flattened: DiagramSequenceItem[] = [{
+      id: diagram.id,
+      prompt: diagram.prompt,
+      code: diagram.code,
+      createdAt: new Date(diagram.createdAt),
+      isParent,
+      parentDiagramId: diagram.parentDiagramId || undefined,
+      level
+    }];
+
+    if (diagram.childDiagrams?.length) {
+      const sortedChildren = [...diagram.childDiagrams].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      
+      for (const child of sortedChildren) {
+        flattened.push(...flattenDiagramHierarchy(child, level + 1));
+      }
+    }
+
+    return flattened;
+  };
 
   useEffect(() => {
     if (diagramData) {
       const sequence = [];
       
-      // Add parent diagram if we're viewing a child
+      // Add parent diagram and its ancestors if we're viewing a child
       if (diagramData.parentDiagram) {
-        sequence.push({
-          id: diagramData.parentDiagram.id,
-          prompt: diagramData.parentDiagram.prompt,
-          code: diagramData.parentDiagram.code,
-          createdAt: new Date(diagramData.parentDiagram.createdAt),
-          isParent: true,
-          parentDiagramId: diagramData.parentDiagram.parentDiagramId || undefined
-        });
+        sequence.push(...flattenDiagramHierarchy(diagramData.parentDiagram, 0, true));
       }
 
-      // Add current diagram
-      sequence.push({
-        id: diagramData.id,
-        prompt: diagramData.prompt,
-        code: diagramData.code,
-        createdAt: new Date(diagramData.createdAt),
-        parentDiagramId: diagramData.parentDiagramId || undefined
-      });
-
-      // Add child diagrams in chronological order
-      if (diagramData.childDiagrams?.length > 0) {
-        const sortedChildren = [...diagramData.childDiagrams].sort(
-          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        );
-        sortedChildren.forEach(child => {
-          sequence.push({
-            id: child.id,
-            prompt: child.prompt,
-            code: child.code,
-            createdAt: new Date(child.createdAt),
-            parentDiagramId: child.parentDiagramId || undefined
-          });
-        });
-      }
+      // Add current diagram and its descendants
+      sequence.push(...flattenDiagramHierarchy(diagramData));
 
       setDiagramSequence(sequence);
     }
@@ -187,17 +193,20 @@ export function DiagramPreview({ diagram, diagramType, onUpdate, prompt, diagram
     onSuccess: (newDiagram) => {
       if (newDiagram.code) {
         // Add the new diagram to the sequence
-        setDiagramSequence(prev => {
+        setDiagramSequence((prev: DiagramSequenceItem[]) => {
           // Find the parent diagram to ensure proper linking
           const parentDiagram = prev.find(d => d.id === newDiagram.parentDiagramId);
           if (!parentDiagram) return prev;
 
-          const newDiagramEntry = {
+          const parentLevel = parentDiagram.level;
+          const newDiagramEntry: DiagramSequenceItem = {
             id: newDiagram.id,
             prompt: newDiagram.prompt,
             code: newDiagram.code,
             createdAt: new Date(newDiagram.createdAt),
-            parentDiagramId: newDiagram.parentDiagramId || undefined
+            parentDiagramId: newDiagram.parentDiagramId || undefined,
+            isParent: false,
+            level: parentLevel + 1
           };
 
           return [...prev, newDiagramEntry];
@@ -284,9 +293,13 @@ export function DiagramPreview({ diagram, diagramType, onUpdate, prompt, diagram
     });
   };
 
-  // Helper function to get follow-ups for a specific diagram
+  // Helper function to get follow-ups for a specific diagram at the same level
   const getFollowUps = (parentId: string) => {
-    return diagramSequence.filter(d => d.parentDiagramId === parentId);
+    const parentLevel = diagramSequence.find(d => d.id === parentId)?.level ?? 0;
+    // Group all diagrams at the same level
+    return diagramSequence.filter(d => 
+      d.level === parentLevel + 1
+    );
   };
 
   // Helper function to get current follow-up index
@@ -318,10 +331,12 @@ export function DiagramPreview({ diagram, diagramType, onUpdate, prompt, diagram
 
   const DiagramView = ({ diagramCode, id }: { diagramCode: string; id: string }) => {
     // Get parent ID and check if there are siblings to navigate through
-    const parentId = diagramData?.parentDiagramId ?? diagramData?.id;
-    const followUps = parentId ? getFollowUps(parentId) : [];
-    const hasMultipleVersions = followUps.length > 1;
-    const currentIndex = parentId ? getCurrentFollowUpIndex(parentId, id) : -1;
+    const parentId = (diagramData?.parentDiagramId || id) as string;
+    const currentDiagram = diagramSequence.find(d => d.id === id);
+    const currentLevel = currentDiagram?.level ?? 0;
+    const diagramsAtSameLevel = diagramSequence.filter(d => d.level === currentLevel);
+    const hasMultipleVersions = diagramsAtSameLevel.length > 1;
+    const currentIndex = diagramsAtSameLevel.findIndex(d => d.id === id);
 
     return (
       <div
@@ -338,7 +353,7 @@ export function DiagramPreview({ diagram, diagramType, onUpdate, prompt, diagram
         onWheel={handleWheel}
       >
         {/* Navigation arrows */}
-        {parentId && hasMultipleVersions && (
+        {hasMultipleVersions && (
           <>
             <Button
               variant="minimal"
@@ -357,7 +372,7 @@ export function DiagramPreview({ diagram, diagramType, onUpdate, prompt, diagram
               <ChevronRight className="h-6 w-6" />
             </Button>
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-black/20 text-white px-3 py-1 rounded-full text-sm">
-              {currentIndex + 1} of {followUps.length}
+              {currentIndex + 1} of {diagramsAtSameLevel.length}
             </div>
           </>
         )}
@@ -409,107 +424,118 @@ export function DiagramPreview({ diagram, diagramType, onUpdate, prompt, diagram
       <CardContent>
         <div className="space-y-8">
           {diagramSequence.length > 0 ? (
-            diagramSequence.map((diag, index) => (
-              <div key={diag.id} className="border rounded-lg p-6 bg-white dark:bg-slate-900">
-                <div className="mb-4">
-                  <h3 className="text-lg font-medium mb-2 flex items-center justify-between">
-                    <span>{diag.isParent ? 'Original Diagram' : `Follow-up #${index}`}</span>
-                    {!diag.isParent && getFollowUps(diag.parentDiagramId ?? '').length > 1 && (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="minimal"
-                          size="icon"
-                          onClick={() => handleVersionNavigation(diag.parentDiagramId ?? '', 'prev')}
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <span className="text-sm">
-                          {getCurrentFollowUpIndex(diag.parentDiagramId ?? '', diag.id) + 1} of {getFollowUps(diag.parentDiagramId ?? '').length}
-                        </span>
-                        <Button
-                          variant="minimal"
-                          size="icon"
-                          onClick={() => handleVersionNavigation(diag.parentDiagramId ?? '', 'next')}
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
+            diagramSequence.map((diag, index) => {
+              const isParentDiagram = diag.isParent || !diag.parentDiagramId;
+              const diagramsAtSameLevel = diagramSequence.filter(d => 
+                d.level === diag.level && !d.isParent
+              );
+              const hasMultipleVersions = diagramsAtSameLevel.length > 1;
+              const currentIndex = diagramsAtSameLevel.findIndex(d => d.id === diag.id);
+
+              return (
+                <div key={diag.id} className="border rounded-lg p-6 bg-white dark:bg-slate-900">
+                  <div className="mb-4">
+                    <h3 className="text-lg font-medium mb-2 flex items-center justify-between">
+                      <span>
+                        {diag.isParent ? 'Original Diagram' : `Follow-up #${index} (Level ${diag.level})`}
+                      </span>
+                      {!isParentDiagram && hasMultipleVersions && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="minimal"
+                            size="icon"
+                            onClick={() => handleVersionNavigation(diag.parentDiagramId!, 'prev')}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <span className="text-sm">
+                            {currentIndex + 1} of {diagramsAtSameLevel.length}
+                          </span>
+                          <Button
+                            variant="minimal"
+                            size="icon"
+                            onClick={() => handleVersionNavigation(diag.parentDiagramId!, 'next')}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </h3>
+                    <div className="text-sm text-gray-500 mb-2">
+                      Created {formatDistanceToNow(diag.createdAt)} ago
+                    </div>
+                    <div className="bg-gray-100 dark:bg-slate-800 rounded-lg p-4">
+                      <p className="text-sm font-medium">Prompt:</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">{diag.prompt}</p>
+                    </div>
+                  </div>
+                  <DiagramView diagramCode={diag.code} id={diag.id} />
+                  <DiagramControls
+                    className="mt-4"
+                    content={diag.code}
+                    diagramId={diag.id}
+                    type={diagramType ?? "diagram"}
+                    currentTheme={currentTheme}
+                    onThemeChange={handleThemeChange}
+                    onCopy={handleCopyToClipboard}
+                    onZoomIn={zoomIn}
+                    onZoomOut={zoomOut}
+                    onResetZoom={resetZoom}
+                    onContentUpdate={onUpdate}
+                  />
+                  
+                  {/* Follow-up form for each diagram */}
+                  <div className="mt-4">
+                    {selectedDiagramForFollowUp === diag.id ? (
+                      <form onSubmit={(e) => handleFollowUpSubmit(e, diag.id)} className="space-y-2">
+                        <div className="flex gap-2">
+                          <textarea
+                            value={followUpPrompt}
+                            onChange={(e) => setFollowUpPrompt(e.target.value)}
+                            placeholder="Describe the changes you want to make to this diagram..."
+                            className="w-full rounded-md border p-2"
+                            rows={3}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="submit"
+                            disabled={isGeneratingFollowUp || !followUpPrompt.trim()}
+                          >
+                            {isGeneratingFollowUp ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Generating Changes
+                              </>
+                            ) : (
+                              "Apply Changes"
+                            )}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => {
+                              setSelectedDiagramForFollowUp(null);
+                              setFollowUpPrompt("");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => setSelectedDiagramForFollowUp(diag.id)}
+                      >
+                        Create Follow-up
+                      </Button>
                     )}
-                  </h3>
-                  <div className="text-sm text-gray-500 mb-2">
-                    Created {formatDistanceToNow(diag.createdAt)} ago
-                  </div>
-                  <div className="bg-gray-100 dark:bg-slate-800 rounded-lg p-4">
-                    <p className="text-sm font-medium">Prompt:</p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">{diag.prompt}</p>
                   </div>
                 </div>
-                <DiagramView diagramCode={diag.code} id={diag.id} />
-                <DiagramControls
-                  className="mt-4"
-                  content={diag.code}
-                  diagramId={diag.id}
-                  type={diagramType ?? "diagram"}
-                  currentTheme={currentTheme}
-                  onThemeChange={handleThemeChange}
-                  onCopy={handleCopyToClipboard}
-                  onZoomIn={zoomIn}
-                  onZoomOut={zoomOut}
-                  onResetZoom={resetZoom}
-                  onContentUpdate={onUpdate}
-                />
-                
-                {/* Follow-up form for each diagram */}
-                <div className="mt-4">
-                  {selectedDiagramForFollowUp === diag.id ? (
-                    <form onSubmit={(e) => handleFollowUpSubmit(e, diag.id)} className="space-y-2">
-                      <div className="flex gap-2">
-                        <textarea
-                          value={followUpPrompt}
-                          onChange={(e) => setFollowUpPrompt(e.target.value)}
-                          placeholder="Describe the changes you want to make to this diagram..."
-                          className="w-full rounded-md border p-2"
-                          rows={3}
-                        />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="submit"
-                          disabled={isGeneratingFollowUp || !followUpPrompt.trim()}
-                        >
-                          {isGeneratingFollowUp ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Generating Changes
-                            </>
-                          ) : (
-                            "Apply Changes"
-                          )}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          onClick={() => {
-                            setSelectedDiagramForFollowUp(null);
-                            setFollowUpPrompt("");
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </form>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => setSelectedDiagramForFollowUp(diag.id)}
-                    >
-                      Create Follow-up
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ))
+              );
+            })
           ) : diagram ? (
             <div className="border rounded-lg p-6 bg-white dark:bg-slate-900">
               <DiagramView diagramCode={diagram} id={diagramId} />
