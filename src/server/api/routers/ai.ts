@@ -159,7 +159,7 @@ export const aiRouter = createTRPCRouter({
             userId: ctx.session?.user?.id,
             anonymousId: !ctx.session?.user ? input.anonymousId : undefined,
             threadId: input.threadId ?? undefined,
-            parentId: input.parentId ?? undefined,
+            parentDiagramId: input.parentId ?? undefined,
           },
         });
 
@@ -203,8 +203,6 @@ export const aiRouter = createTRPCRouter({
       where: { userId: ctx.session.user.id },
       include: {
         thread: true,
-        parentDiagram: true,
-        childDiagrams: true,
       },
       orderBy: { createdAt: "desc" },
     });
