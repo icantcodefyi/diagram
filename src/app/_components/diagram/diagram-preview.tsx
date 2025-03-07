@@ -16,7 +16,7 @@ import { renderMermaidDiagram } from "@/lib/mermaid-config";
 import { Button } from "@/components/ui/texturebutton";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/trpc/react";
-import { Loader } from "lucide-react";
+import { Loader, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSession } from "next-auth/react";
 import { getAnonymousUser } from "@/lib/anonymous-user";
@@ -37,9 +37,12 @@ interface DiagramPreviewProps {
 export function DiagramPreview({ diagram, diagramType, onUpdate, diagramId }: DiagramPreviewProps) {
   const [followUpText, setFollowUpText] = useState("");
   const [diagramHistory, setDiagramHistory] = useState<DiagramHistory[]>([]);
+  const [currentDiagramIndex, setCurrentDiagramIndex] = useState(0);
   const [anonymousId, setAnonymousId] = useState<string | null>(null);
   const { toast } = useToast();
   const { data: session } = useSession();
+
+  const currentDiagram = diagramHistory[currentDiagramIndex];
 
   // Fetch anonymous ID if not logged in
   useEffect(() => {
@@ -89,8 +92,8 @@ export function DiagramPreview({ diagram, diagramType, onUpdate, diagramId }: Di
     zoomOut,
     resetZoom,
   } = useDiagramPreview({
-    diagram,
-    diagramId: "mermaid-diagram",
+    diagram: currentDiagram?.content ?? diagram,
+    diagramId: "mermaid-diagram-current",
   });
 
   const followUpMutation = api.ai.followUpDiagram.useMutation({
@@ -160,102 +163,164 @@ export function DiagramPreview({ diagram, diagramType, onUpdate, diagramId }: Di
     });
   };
 
-  // Render diagrams when they change
+  const goToNextDiagram = () => {
+    if (currentDiagramIndex < diagramHistory.length - 1) {
+      setCurrentDiagramIndex(prev => prev + 1);
+    }
+  };
+
+  const goToPreviousDiagram = () => {
+    if (currentDiagramIndex > 0) {
+      setCurrentDiagramIndex(prev => prev - 1);
+    }
+  };
+
+  // Update diagram rendering when current diagram or theme changes
   useEffect(() => {
-    diagramHistory.forEach((diagram, index) => {
-      void renderMermaidDiagram(diagram.content, `#mermaid-diagram-${index}`);
-    });
-  }, [diagramHistory, currentTheme]);
+    const renderDiagram = async () => {
+      try {
+        if (currentDiagram) {
+          await renderMermaidDiagram(
+            currentDiagram.content,
+            "#mermaid-diagram-current"
+          );
+        } else if (diagram) {
+          await renderMermaidDiagram(
+            diagram,
+            "#mermaid-diagram-current"
+          );
+        }
+      } catch (error) {
+        console.error("Failed to render diagram:", error);
+      }
+    };
+
+    void renderDiagram();
+  }, [currentDiagram, diagram, currentTheme]);
+
+  // Reset position when changing diagrams
+  useEffect(() => {
+    setPosition({ x: 0, y: 0 });
+  }, [currentDiagramIndex]);
 
   return (
     <div className="space-y-6">
-      {diagramHistory.map((diagram, index) => (
-        <Card key={diagram.id} className="relative">
-          <CardHeader>
+      <Card className="relative">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
             <CardTitle className="text-xl">
-              {index === 0 ? 
-                `${diagram.type.charAt(0).toUpperCase() + diagram.type.slice(1)} Diagram` :
-                `Follow-up ${diagram.type.charAt(0).toUpperCase() + diagram.type.slice(1)} Diagram ${index}`
+              {currentDiagramIndex === 0 ? 
+                `${currentDiagram?.type ? currentDiagram.type.charAt(0).toUpperCase() + currentDiagram.type.slice(1) : ''} Diagram` :
+                `Follow-up ${currentDiagram?.type ? currentDiagram.type.charAt(0).toUpperCase() + currentDiagram.type.slice(1) : ''} Diagram ${currentDiagramIndex}`
               }
             </CardTitle>
-            <CardDescription>{DIAGRAM_TYPES[diagram.type]}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="relative rounded-lg bg-white p-4 dark:bg-slate-900">
-              <div
-                className="flex min-h-[500px] items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
-                style={{
-                  position: 'relative',
-                  width: '100%',
-                }}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-                onWheel={handleWheel}
-              >
-                <div
-                  style={{
-                    transformOrigin: "center center",
-                    transition: isDragging ? "none" : "transform 0.2s ease-in-out",
-                    position: 'absolute',
-                    left: '50%',
-                    top: '50%',
-                    transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`,
-                  }}
+            <CardDescription>{currentDiagram && DIAGRAM_TYPES[currentDiagram.type]}</CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            {diagramHistory.length > 1 && (
+              <>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  onClick={goToPreviousDiagram}
+                  disabled={currentDiagramIndex === 0}
+                  className="h-8 w-8"
                 >
-                  <div id={`mermaid-diagram-${index}`} />
-                </div>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  {currentDiagramIndex + 1} / {diagramHistory.length}
+                </span>
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  onClick={goToNextDiagram}
+                  disabled={currentDiagramIndex === diagramHistory.length - 1}
+                  className="h-8 w-8"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="relative rounded-lg bg-white p-4 dark:bg-slate-900">
+            <div
+              className="flex min-h-[500px] items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
+              style={{
+                position: 'relative',
+                width: '100%',
+              }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onWheel={handleWheel}
+            >
+              <div
+                style={{
+                  transformOrigin: "center center",
+                  transition: isDragging ? "none" : "transform 0.2s ease-in-out",
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px)) scale(${scale})`,
+                }}
+              >
+                <div id="mermaid-diagram-current" />
               </div>
+            </div>
+            {currentDiagram && (
               <DiagramControls
                 className="absolute right-4 top-4 z-10"
-                content={diagram.content}
-                diagramId={`mermaid-diagram-${index}`}
-                type={diagram.type}
+                content={currentDiagram.content}
+                diagramId="mermaid-diagram-current"
+                type={currentDiagram.type}
                 currentTheme={currentTheme}
                 onThemeChange={handleThemeChange}
                 onCopy={handleCopyToClipboard}
                 onZoomIn={zoomIn}
                 onZoomOut={zoomOut}
                 onResetZoom={resetZoom}
-                onContentUpdate={index === 0 ? onUpdate : undefined}
+                onContentUpdate={currentDiagramIndex === 0 ? onUpdate : undefined}
               />
-            </div>
-
-            {/* Show follow-up input only for the latest diagram */}
-            {index === diagramHistory.length - 1 && (
-              <div className="rounded-lg border bg-card p-4">
-                <form onSubmit={handleFollowUp} className="space-y-4">
-                  <div>
-                    <h4 className="mb-2 font-medium">Follow-up Instructions</h4>
-                    <p className="text-sm text-muted-foreground mb-2">Provide additional instructions to modify or enhance the diagram</p>
-                    <Textarea
-                      placeholder="Enter your follow-up instructions..."
-                      value={followUpText}
-                      onChange={(e) => setFollowUpText(e.target.value)}
-                      className="min-h-[100px]"
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    disabled={followUpMutation.status === 'pending' || !followUpText.trim()}
-                    className="w-full"
-                  >
-                    {followUpMutation.status === 'pending' ? (
-                      <>
-                        <Loader className="mr-2 h-4 w-4 animate-spin" />
-                        Generating
-                      </>
-                    ) : (
-                      "Generate Follow-up"
-                    )}
-                  </Button>
-                </form>
-              </div>
             )}
-          </CardContent>
-        </Card>
-      ))}
+          </div>
+
+          {/* Show follow-up input only when viewing the latest diagram */}
+          {currentDiagramIndex === diagramHistory.length - 1 && (
+            <div className="rounded-lg border bg-card p-4">
+              <form onSubmit={handleFollowUp} className="space-y-4">
+                <div>
+                  <h4 className="mb-2 font-medium">Follow-up Instructions</h4>
+                  <p className="text-sm text-muted-foreground mb-2">Provide additional instructions to modify or enhance the diagram</p>
+                  <Textarea
+                    placeholder="Enter your follow-up instructions..."
+                    value={followUpText}
+                    onChange={(e) => setFollowUpText(e.target.value)}
+                    className="min-h-[100px]"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  disabled={followUpMutation.status === 'pending' || !followUpText.trim()}
+                  className="w-full"
+                >
+                  {followUpMutation.status === 'pending' ? (
+                    <>
+                      <Loader className="mr-2 h-4 w-4 animate-spin" />
+                      Generating
+                    </>
+                  ) : (
+                    "Generate Follow-up"
+                  )}
+                </Button>
+              </form>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
