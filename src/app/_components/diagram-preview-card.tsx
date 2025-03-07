@@ -36,7 +36,7 @@ export function DiagramPreviewCard({ diagram }: { diagram: Diagram }) {
         duration: 2000,
         className: "rounded",
       });
-      void utils.ai.getUserDiagrams.invalidate();
+      void utils.diagram.getUserDiagrams.invalidate();
     },
     onError: (error) => {
       toast({

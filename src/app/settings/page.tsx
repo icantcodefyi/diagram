@@ -45,7 +45,7 @@ export default function SettingsPage() {
   const { setDiagrams, setCredits } = useDiagramStore();
 
   const { data: diagrams, isLoading: diagramsLoading } =
-    api.ai.getUserDiagrams.useQuery(undefined, {
+    api.diagram.getUserDiagrams.useQuery(undefined, {
       enabled: !!session,
     });
 
