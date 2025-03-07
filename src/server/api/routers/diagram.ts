@@ -1,4 +1,4 @@
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
 import { z } from "zod";
 
 export const diagramRouter = createTRPCRouter({
@@ -14,8 +14,9 @@ export const diagramRouter = createTRPCRouter({
     });
   }),
 
-  getUserDiagramsWithFollowUps: protectedProcedure.input(z.object({
+  getUserDiagramsWithFollowUps: publicProcedure.input(z.object({
     diagramId: z.string(),
+    anonymousId: z.string().optional(),
   })).query(async ({ ctx, input }) => {
     // Helper function to recursively get all diagrams in the chain
     async function getAllDiagramsInChain(diagramId: string, seenIds = new Set<string>()): Promise<string[]> {
@@ -44,6 +45,19 @@ export const diagramRouter = createTRPCRouter({
       throw new Error("Diagram not found");
     }
 
+    // Verify ownership
+    if (ctx.session?.user) {
+      if (initialDiagram.userId !== ctx.session.user.id) {
+        throw new Error("Unauthorized access to diagram");
+      }
+    } else if (input.anonymousId) {
+      if (initialDiagram.anonymousId !== input.anonymousId) {
+        throw new Error("Unauthorized access to diagram");
+      }
+    } else {
+      throw new Error("Authentication required");
+    }
+
     // Get all diagram IDs in the chain
     const diagramIds = await getAllDiagramsInChain(input.diagramId);
 
@@ -53,6 +67,10 @@ export const diagramRouter = createTRPCRouter({
         id: {
           in: diagramIds,
         },
+        OR: [
+          { userId: ctx.session?.user?.id },
+          { anonymousId: input.anonymousId }
+        ]
       },
       orderBy: {
         createdAt: 'asc',

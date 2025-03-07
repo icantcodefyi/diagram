@@ -18,6 +18,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/trpc/react";
 import { Loader } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSession } from "next-auth/react";
+import { getAnonymousUser } from "@/lib/anonymous-user";
 
 interface DiagramHistory {
   id: string;
@@ -35,12 +37,34 @@ interface DiagramPreviewProps {
 export function DiagramPreview({ diagram, diagramType, onUpdate, diagramId }: DiagramPreviewProps) {
   const [followUpText, setFollowUpText] = useState("");
   const [diagramHistory, setDiagramHistory] = useState<DiagramHistory[]>([]);
+  const [anonymousId, setAnonymousId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { data: session } = useSession();
+
+  // Fetch anonymous ID if not logged in
+  useEffect(() => {
+    if (!session?.user) {
+      const fetchAnonymousId = async () => {
+        try {
+          const anonUser = await getAnonymousUser();
+          setAnonymousId(anonUser.id);
+        } catch (error) {
+          console.error("Error fetching anonymous ID:", error);
+        }
+      };
+      void fetchAnonymousId();
+    }
+  }, [session?.user]);
 
   // Add query for diagrams with follow-ups
   const { data: diagramsWithFollowUps, refetch: refetchDiagrams } = api.diagram.getUserDiagramsWithFollowUps.useQuery(
-    { diagramId: diagramId ?? '' },
-    { enabled: !!diagramId }
+    { 
+      diagramId: diagramId ?? '',
+      anonymousId: !session?.user ? anonymousId ?? undefined : undefined
+    },
+    { 
+      enabled: !!diagramId && (!!session?.user || !!anonymousId)
+    }
   );
 
   // Initialize diagram history when first diagram is loaded or when follow-ups are fetched
@@ -132,6 +156,7 @@ export function DiagramPreview({ diagram, diagramType, onUpdate, diagramId }: Di
     followUpMutation.mutate({
       originalDiagramId: diagramHistory.at(-1)?.id ?? diagramId,
       followUpText: followUpText.trim(),
+      anonymousId: !session?.user ? anonymousId ?? undefined : undefined
     });
   };
 
