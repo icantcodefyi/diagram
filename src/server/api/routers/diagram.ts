@@ -6,6 +6,7 @@ export const diagramRouter = createTRPCRouter({
     return ctx.db.diagram.findMany({
       where: {
         userId: ctx.session.user.id,
+        previousDiagramId: null,
       },
       orderBy: {
         createdAt: "desc",

@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/tooltip";
 
 interface DiagramGeneratorFormProps {
-  onDiagramGenerated: (diagram: string, type: DiagramType, enhancedText?: string) => void;
+  onDiagramGenerated: (diagram: string, type: DiagramType, enhancedText?: string, diagramId?: string) => void;
   onError: (error: string | null) => void;
   onShowLogin: () => void;
 }
@@ -96,7 +96,12 @@ export function DiagramGeneratorForm({
         // Render the new diagram
         await renderMermaidDiagram(data.diagram, "#mermaid-diagram");
 
-        onDiagramGenerated(data.diagram, data.type, data.enhancedText);
+        onDiagramGenerated(
+          data.diagram,
+          data.type,
+          data.enhancedText,
+          data.storedDiagram.id
+        );
 
         // Update anonymous credits if not logged in
         if (!session?.user && anonymousCredits !== null) {

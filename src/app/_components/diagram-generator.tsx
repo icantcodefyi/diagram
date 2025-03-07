@@ -14,6 +14,7 @@ export function DiagramGenerator() {
   const [enhancedText, setEnhancedText] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showLoginDialog, setShowLoginDialog] = useState(false);
+  const [currentDiagramId, setCurrentDiagramId] = useState<string | undefined>(undefined);
 
   const handleDiagramUpdate = (newContent: string) => {
     setDiagram(newContent);
@@ -23,10 +24,11 @@ export function DiagramGenerator() {
     <div className="container max-w-4xl space-y-6 py-6">
       <div className="relative">
         <DiagramGeneratorForm
-          onDiagramGenerated={(newDiagram, type, newEnhancedText) => {
+          onDiagramGenerated={(newDiagram: string, type: DiagramType, newEnhancedText?: string, diagramId?: string) => {
             setDiagram(newDiagram);
             setDiagramType(type);
             setEnhancedText(newEnhancedText ?? null);
+            setCurrentDiagramId(diagramId);
             setError(null);
           }}
           onError={setError}
@@ -49,6 +51,7 @@ export function DiagramGenerator() {
             diagram={diagram} 
             diagramType={diagramType} 
             onUpdate={handleDiagramUpdate}
+            diagramId={currentDiagramId}
           />
         </>
       )}
