@@ -158,14 +158,6 @@ export const aiRouter = createTRPCRouter({
     return subscription;
   }),
 
-  getUserDiagrams: protectedProcedure.query(async ({ ctx }) => {
-    const diagrams = await ctx.db.diagram.findMany({
-      where: { userId: ctx.session.user.id },
-      orderBy: { createdAt: "desc" },
-    });
-    return diagrams;
-  }),
-
   deleteDiagram: protectedProcedure
     .input(deleteDiagramSchema)
     .mutation(async ({ ctx, input }) => {
