@@ -61,11 +61,11 @@ export function DiagramPreview({ diagram, diagramType, onUpdate, diagramId }: Di
 
   // Add query for diagrams with follow-ups
   const { data: diagramsWithFollowUps, refetch: refetchDiagrams } = api.diagram.getUserDiagramsWithFollowUps.useQuery(
-    { 
+    {
       diagramId: diagramId ?? '',
       anonymousId: !session?.user ? anonymousId ?? undefined : undefined
     },
-    { 
+    {
       enabled: !!diagramId && (!!session?.user || !!anonymousId)
     }
   );
@@ -209,7 +209,7 @@ export function DiagramPreview({ diagram, diagramType, onUpdate, diagramId }: Di
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-xl">
-              {currentDiagramIndex === 0 ? 
+              {currentDiagramIndex === 0 ?
                 `${currentDiagram?.type ? currentDiagram.type.charAt(0).toUpperCase() + currentDiagram.type.slice(1) : ''} Diagram` :
                 `Follow-up ${currentDiagram?.type ? currentDiagram.type.charAt(0).toUpperCase() + currentDiagram.type.slice(1) : ''} Diagram ${currentDiagramIndex}`
               }
