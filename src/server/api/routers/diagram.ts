@@ -1,4 +1,4 @@
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
 import { z } from "zod";
 
 export const diagramRouter = createTRPCRouter({
@@ -6,11 +6,81 @@ export const diagramRouter = createTRPCRouter({
     return ctx.db.diagram.findMany({
       where: {
         userId: ctx.session.user.id,
+        previousDiagramId: null,
       },
       orderBy: {
         createdAt: "desc",
       },
     });
+  }),
+
+  getUserDiagramsWithFollowUps: publicProcedure.input(z.object({
+    diagramId: z.string(),
+    anonymousId: z.string().optional(),
+  })).query(async ({ ctx, input }) => {
+    // Helper function to recursively get all diagrams in the chain
+    async function getAllDiagramsInChain(diagramId: string, seenIds = new Set<string>()): Promise<string[]> {
+      if (seenIds.has(diagramId)) return []; // Prevent infinite loops
+      seenIds.add(diagramId);
+      
+      const nextDiagram = await ctx.db.diagram.findFirst({
+        where: { previousDiagramId: diagramId },
+        select: { id: true },
+      });
+
+      if (!nextDiagram) return [diagramId];
+
+      const chainIds = await getAllDiagramsInChain(nextDiagram.id, seenIds);
+      return [diagramId, ...chainIds];
+    }
+
+    // First get the initial diagram
+    const initialDiagram = await ctx.db.diagram.findUnique({
+      where: {
+        id: input.diagramId,
+      },
+    });
+
+    if (!initialDiagram) {
+      throw new Error("Diagram not found");
+    }
+
+    // Verify ownership
+    if (ctx.session?.user) {
+      if (initialDiagram.userId !== ctx.session.user.id) {
+        throw new Error("Unauthorized access to diagram");
+      }
+    } else if (input.anonymousId) {
+      if (initialDiagram.anonymousId !== input.anonymousId) {
+        throw new Error("Unauthorized access to diagram");
+      }
+    } else {
+      throw new Error("Authentication required");
+    }
+
+    // Get all diagram IDs in the chain
+    const diagramIds = await getAllDiagramsInChain(input.diagramId);
+
+    // Fetch all diagrams in the chain with a single query
+    const diagrams = await ctx.db.diagram.findMany({
+      where: {
+        id: {
+          in: diagramIds,
+        },
+        OR: [
+          { userId: ctx.session?.user?.id },
+          { anonymousId: input.anonymousId }
+        ]
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+    });
+
+    // Return diagrams in the correct chain order
+    return diagrams.sort((a, b) => 
+      diagramIds.indexOf(a.id) - diagramIds.indexOf(b.id)
+    );
   }),
 
   update: protectedProcedure

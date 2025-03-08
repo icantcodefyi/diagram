@@ -14,6 +14,9 @@ import { formatDistanceToNow } from "date-fns";
 import { useDiagramPreview } from "@/hooks/use-diagram-preview";
 import { DiagramControls } from "./diagram-controls";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { api } from "@/trpc/react";
 
 interface DiagramPreviewModalProps {
   diagram: PrismaDiagram | StoreDiagram;
@@ -28,7 +31,18 @@ export function DiagramPreviewModal({
   onClose,
   onUpdate,
 }: DiagramPreviewModalProps) {
+  const [currentDiagramIndex, setCurrentDiagramIndex] = useState(0);
   const diagramId = `modal-diagram-${diagram.id}`;
+
+  // Query for diagram follow-ups
+  const { data: diagramsWithFollowUps } = api.diagram.getUserDiagramsWithFollowUps.useQuery(
+    { diagramId: diagram.id },
+    { enabled: !!diagram.id }
+  );
+
+  const diagrams = diagramsWithFollowUps ?? [diagram];
+  const currentDiagram = diagrams[currentDiagramIndex] ?? diagram;
+
   const {
     currentTheme,
     scale,
@@ -40,7 +54,7 @@ export function DiagramPreviewModal({
     isMinZoom,
     isMaxZoom,
   } = useDiagramPreview({
-    diagram: diagram.content,
+    diagram: currentDiagram.content,
     diagramId,
   });
 
@@ -80,37 +94,81 @@ export function DiagramPreviewModal({
     }
   };
 
+  const goToNextDiagram = () => {
+    if (currentDiagramIndex < diagrams.length - 1) {
+      setCurrentDiagramIndex(prev => prev + 1);
+    }
+  };
+
+  const goToPreviousDiagram = () => {
+    if (currentDiagramIndex > 0) {
+      setCurrentDiagramIndex(prev => prev - 1);
+    }
+  };
+
+  useEffect(() => {
+    // Render diagram whenever current diagram changes
+    void renderMermaidDiagram(currentDiagram.content, `#${diagramId}`);
+  }, [currentDiagram, currentDiagramIndex]);
+
   useEffect(() => {
     if (isOpen) {
-      // Reset position when modal opens
+      // Reset position and index when modal opens
       setPosition({ x: 0, y: 0 });
-      // Wait for the modal to be fully rendered before rendering the diagram
-      const timer = setTimeout(() => {
-        void renderMermaidDiagram(diagram.content, `#${diagramId}`);
-      }, 100);
-
-      return () => clearTimeout(timer);
+      setCurrentDiagramIndex(0);
     }
-  }, [isOpen, diagram.content, diagramId, currentTheme]);
+  }, [isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="flex max-h-[95vh] w-[1200px] max-w-[95vw] flex-col overflow-auto p-6">
-        <DialogHeader className="space-y-1">
-          <DialogTitle className="text-xl">
-            {diagram.name ?? `${diagram.type} Diagram`}
-          </DialogTitle>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>
-              {formatDistanceToNow(new Date(diagram.createdAt), {
-                addSuffix: true,
-              })}
-            </span>
-            <span>•</span>
-            <Badge variant={diagram.isComplex ? "default" : "secondary"}>
-              {diagram.isComplex ? "Complex" : "Simple"}
-            </Badge>
+        <DialogHeader className="flex flex-row items-center justify-between space-y-1">
+          <div>
+            <DialogTitle className="text-xl">
+              {currentDiagramIndex === 0 ? 
+                currentDiagram.name :
+                `Follow-up ${currentDiagramIndex} - ${currentDiagram.name?.replace(/\s*\(Follow-up\)\s*/g, '')}`
+              }
+            </DialogTitle>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>
+                {formatDistanceToNow(new Date(currentDiagram.createdAt), {
+                  addSuffix: true,
+                })}
+              </span>
+              <span>•</span>
+              <Badge variant={currentDiagram.isComplex ? "default" : "secondary"}>
+                {currentDiagram.isComplex ? "Complex" : "Simple"}
+              </Badge>
+            </div>
           </div>
+          {diagrams.length > 1 && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={goToPreviousDiagram}
+                disabled={currentDiagramIndex === 0}
+                className="h-8 px-2"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <span className="mx-2 text-sm text-muted-foreground">
+                {currentDiagramIndex + 1} / {diagrams.length}
+              </span>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={goToNextDiagram}
+                disabled={currentDiagramIndex === diagrams.length - 1}
+                className="h-8 px-2"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </DialogHeader>
         <div className="relative mt-4 flex-1">
           <div className="relative rounded-lg bg-white p-4 dark:bg-slate-900">
@@ -141,10 +199,10 @@ export function DiagramPreviewModal({
             </div>
             <DiagramControls
               className="absolute right-4 top-4 z-10"
-              content={diagram.content}
+              content={currentDiagram.content}
               diagramId={diagramId}
-              type={diagram.type}
-              name={diagram.name ?? undefined}
+              type={currentDiagram.type}
+              name={currentDiagram.name ?? undefined}
               currentTheme={currentTheme}
               onThemeChange={handleThemeChange}
               onCopy={handleCopyToClipboard}
