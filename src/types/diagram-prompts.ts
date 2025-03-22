@@ -46,15 +46,6 @@ export const DIAGRAM_PROMPTS: Record<DiagramType, string> = {
 - Optional vs required relationships
 - Meaningful relationship labels`,
 
-  journey: `Map out a user journey showing experience stages. Include:
-- Clear task names and sections
-- Proper scoring for each step (1-5)
-- Logical progression of tasks
-- User sentiment at each stage
-- Task grouping by journey phase
-- Clear titles for each section
-- Proper syntax for task scores`,
-
   gantt: `Create a Gantt chart for project timeline visualization. Include:
 - Clear section definitions
 - Task dependencies
