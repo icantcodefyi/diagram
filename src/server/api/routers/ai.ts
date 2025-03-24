@@ -13,6 +13,7 @@ import {
 import { db } from "@/server/db";
 import { validateMermaidDiagram as validateMermaid } from "@/server/services/mermaid-validation.service";
 import { validateAndUpdateUserCredits } from "@/server/services/credits.service";
+import { createThreadWithPrompt } from "@/server/services/thread.service";
 
 // Input schemas
 const generateDiagramSchema = z.object({
@@ -21,6 +22,8 @@ const generateDiagramSchema = z.object({
   previousError: z.string().optional(),
   name: z.string().optional(),
   anonymousId: z.string().optional(),
+  threadId: z.string().optional(),
+  parentId: z.string().optional(),
 });
 
 const deleteDiagramSchema = z.object({
@@ -104,15 +107,59 @@ export const aiRouter = createTRPCRouter({
           suggestedType,
         );
 
+        // If threadId is provided, verify thread ownership
+        if (input.threadId && ctx.session?.user?.id) {
+          const thread = await db.diagramThread.findFirst({
+            where: {
+              id: input.threadId,
+              userId: ctx.session.user.id,
+            },
+          });
+
+          if (!thread) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Thread not found or unauthorized",
+            });
+          }
+        } else if (ctx.session?.user?.id) {
+          // If no threadId is provided and user is logged in, create a new thread with prompt
+          const threadResult = await createThreadWithPrompt(
+            ctx.session.user.id,
+            input.text,
+            input.isComplex ?? false
+          );
+          input.threadId = threadResult.thread.id;
+        }
+
+        // If parentId is provided, verify it exists and belongs to the same thread
+        if (input.parentId && input.threadId) {
+          const parentDiagram = await db.diagram.findFirst({
+            where: {
+              id: input.parentId,
+              threadId: input.threadId,
+            },
+          });
+
+          if (!parentDiagram) {
+            throw new TRPCError({
+              code: "NOT_FOUND",
+              message: "Parent diagram not found in thread",
+            });
+          }
+        }
+
         // Store the diagram
         const diagram = await db.diagram.create({
           data: {
-            content: validDiagram,
+            prompt: input.text,
+            code: validDiagram,
             type: suggestedType,
-            name: generatedTitle,
             isComplex: input.isComplex ?? false,
             userId: ctx.session?.user?.id,
             anonymousId: !ctx.session?.user ? input.anonymousId : undefined,
+            threadId: input.threadId ?? undefined,
+            parentDiagramId: input.parentId ?? undefined,
           },
         });
 
@@ -154,6 +201,9 @@ export const aiRouter = createTRPCRouter({
   getUserDiagrams: protectedProcedure.query(async ({ ctx }) => {
     const diagrams = await ctx.db.diagram.findMany({
       where: { userId: ctx.session.user.id },
+      include: {
+        thread: true,
+      },
       orderBy: { createdAt: "desc" },
     });
     return diagrams;
