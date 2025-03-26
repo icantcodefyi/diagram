@@ -27,6 +27,13 @@ const deleteDiagramSchema = z.object({
   diagramId: z.string().min(1, "Diagram ID is required"),
 });
 
+const followUpDiagramSchema = z.object({
+  originalDiagramId: z.string().min(1, "Original diagram ID is required"),
+  followUpText: z.string().min(1, "Please provide follow-up instructions"),
+  isComplex: z.boolean().optional().default(false),
+  anonymousId: z.string().optional(),
+});
+
 export const aiRouter = createTRPCRouter({
   generateDiagram: publicProcedure
     .input(generateDiagramSchema)
@@ -151,14 +158,6 @@ export const aiRouter = createTRPCRouter({
     return subscription;
   }),
 
-  getUserDiagrams: protectedProcedure.query(async ({ ctx }) => {
-    const diagrams = await ctx.db.diagram.findMany({
-      where: { userId: ctx.session.user.id },
-      orderBy: { createdAt: "desc" },
-    });
-    return diagrams;
-  }),
-
   deleteDiagram: protectedProcedure
     .input(deleteDiagramSchema)
     .mutation(async ({ ctx, input }) => {
@@ -188,5 +187,128 @@ export const aiRouter = createTRPCRouter({
       return {
         message: "Diagram deleted successfully",
       };
+    }),
+
+  followUpDiagram: publicProcedure
+    .input(followUpDiagramSchema)
+    .mutation(async ({ input, ctx }) => {
+      try {
+        // Validate and update credits
+        await validateAndUpdateUserCredits(
+          ctx.session?.user?.id,
+          input.anonymousId,
+          input.isComplex ?? false,
+        );
+
+        // Get the original diagram for context
+        const originalDiagram = await db.diagram.findUnique({
+          where: { id: input.originalDiagramId },
+        });
+
+        if (!originalDiagram) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Original diagram not found",
+          });
+        }
+
+        // Verify ownership if user is authenticated
+        if (ctx.session?.user?.id && originalDiagram.userId !== ctx.session.user.id) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You don't have permission to modify this diagram",
+          });
+        }
+
+        let attempts = 0;
+        const maxAttempts = 5;
+        let validDiagram = "";
+        let lastError: Error | null = null;
+
+        const diagramTypeResult = await determineDiagramType(
+          `Previous diagram content: ${originalDiagram.content}
+
+Follow-up instructions: ${input.followUpText}`,
+        );
+
+        if (!diagramTypeResult.isValid) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: diagramTypeResult.error ?? "Invalid input for diagram generation",
+          });
+        }
+
+        const suggestedType = diagramTypeResult.type;
+        const enhancedText = diagramTypeResult.enhancedText;
+
+        while (attempts < maxAttempts) {
+          try {
+            const mermaidCode = await generateDiagramWithAI(
+              enhancedText ?? input.followUpText,
+              suggestedType,
+              attempts,
+              input.isComplex,
+              lastError?.message
+            );
+
+            if (typeof mermaidCode !== "string") {
+              lastError = new Error("Invalid response format from AI");
+              attempts++;
+              continue;
+            }
+
+            // Validate the Mermaid diagram
+            const isValid = await validateMermaid(mermaidCode);
+            if (!isValid) {
+              lastError = new Error("Generated diagram failed validation");
+              attempts++;
+              continue;
+            }
+
+            validDiagram = mermaidCode;
+            break;
+          } catch (err) {
+            lastError = err instanceof Error ? err : new Error("Unknown error occurred");
+            console.error(`Attempt ${attempts + 1} failed:`, lastError);
+            attempts++;
+          }
+        }
+
+        if (!validDiagram) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Failed to generate a valid diagram after ${maxAttempts} attempts. Last error: ${lastError?.message ?? "Unknown error"}`,
+          });
+        }
+
+        // Store the new version of the diagram
+        const diagram = await db.diagram.create({
+          data: {
+            content: validDiagram,
+            type: suggestedType,
+            name: `${originalDiagram.name} (Follow-up)`,
+            isComplex: input.isComplex ?? false,
+            userId: ctx.session?.user?.id,
+            anonymousId: !ctx.session?.user ? input.anonymousId : undefined,
+            previousDiagramId: input.originalDiagramId, // Link to the original diagram using the correct field name
+          },
+        });
+
+        return {
+          diagram: validDiagram,
+          type: suggestedType,
+          message: `Successfully generated a follow-up ${suggestedType} diagram.`,
+          storedDiagram: diagram,
+          enhancedText,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error instanceof Error ? error.message : "An unknown error occurred",
+        });
+      }
     }),
 });

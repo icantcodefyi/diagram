@@ -87,9 +87,15 @@ model Diagram {
     user        User?    @relation(fields: [userId], references: [id])
     userId      String?
     anonymousId String?
+    
+    // Thread relationships
+    previousDiagram    Diagram?  @relation("ThreadConnection", fields: [previousDiagramId], references: [id])
+    previousDiagramId  String?   @unique
+    nextDiagram       Diagram?  @relation("ThreadConnection")
 
     @@index([userId])
     @@index([anonymousId])
+    @@index([previousDiagramId])
 }
 
 model UserCredits {

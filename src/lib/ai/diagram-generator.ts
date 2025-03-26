@@ -143,22 +143,61 @@ export const generateDiagramWithAI = async (
 
   const complexityGuidelines = isComplex
     ? [
-        "1. Structure:",
-        "   - Use clear hierarchical organization",
-        "   - Group related elements using subgraphs",
-        "   - Maintain consistent direction (TB/LR/etc.)",
-        "2. Relationships:",
-        "   - Use precise arrow types for relationships",
-        "   - Include relationship labels where meaningful",
-        "   - Ensure proper connection syntax",
-        "3. Styling:",
-        "   - Apply consistent node shapes",
-        "   - Use color schemes meaningfully",
-        "   - Add tooltips for complex nodes",
-        "4. Advanced Features:",
-        "   - Implement click events if relevant",
-        "   - Use appropriate line styles",
-        "   - Add descriptive titles/labels",
+        "1. Architecture & Structure:",
+        "   - Implement multi-tier architectural layers",
+        "   - Create nested component hierarchies with detailed subgraphs",
+        "   - Show microservices and distributed system elements",
+        "   - Include infrastructure and deployment components",
+        "   - Represent data storage and caching layers",
+        "2. UI/UX Components:",
+        "   - Design detailed wireframes with pixel-perfect components",
+        "   - Show responsive breakpoints and adaptive layouts",
+        "   - Include accessibility features and ARIA labels",
+        "   - Demonstrate component state variations",
+        "   - Visualize loading states and transitions",
+        "   - Map user journeys and interaction patterns",
+        "3. Advanced Interactions:",
+        "   - Model complex user flows with decision trees",
+        "   - Show form validation and error handling",
+        "   - Include authentication and authorization flows",
+        "   - Demonstrate real-time updates and websockets",
+        "   - Map API integrations and data transformations",
+        "   - Show retry mechanisms and fallback states",
+        "4. Data & State Management:",
+        "   - Illustrate complete data lifecycles",
+        "   - Show state machines and transitions",
+        "   - Include caching and persistence layers",
+        "   - Map event-driven architectures",
+        "   - Demonstrate concurrency handling",
+        "   - Show transaction management flows",
+        "5. Error Handling & Edge Cases:",
+        "   - Map all possible error states and recovery paths",
+        "   - Show network failure scenarios",
+        "   - Include security violation handling",
+        "   - Demonstrate rate limiting and throttling",
+        "   - Show data validation and sanitization",
+        "   - Include logging and monitoring points",
+        "6. Technical Implementation:",
+        "   - Detail API endpoints with request/response formats",
+        "   - Show database schemas and relationships",
+        "   - Include security measures and encryption points",
+        "   - Map third-party service integrations",
+        "   - Show performance optimization techniques",
+        "   - Include deployment and scaling strategies",
+        "7. Visual Enhancement:",
+        "   - Use semantic color coding for states",
+        "   - Implement consistent iconography",
+        "   - Add detailed tooltips and documentation",
+        "   - Show version indicators and timestamps",
+        "   - Include metrics and monitoring points",
+        "   - Use advanced styling for clarity",
+        "8. System Integration:",
+        "   - Map external system dependencies",
+        "   - Show API gateway and service mesh",
+        "   - Include message queues and event buses",
+        "   - Demonstrate cross-service communication",
+        "   - Show data synchronization patterns",
+        "   - Include backup and recovery flows"
       ]
     : [
         "1. Structure:",
@@ -191,12 +230,49 @@ export const generateDiagramWithAI = async (
   let prompt: string;
 
   if (attempt === 0) {
-    prompt = `As an expert in Mermaid.js diagram generation, create a ${isComplex ? "comprehensive" : "simple"} ${suggestedType} diagram following these specialized requirements exactly.
+    prompt = `As an expert in Mermaid.js diagram generation, create a ${isComplex ? "highly detailed and comprehensive" : "simple"} ${suggestedType} diagram following these specialized requirements exactly.
 
 Input Text to Visualize:
 ${text}
 
-Specialized Requirements for ${suggestedType}:
+${isComplex ? `Additional Context for Complex Diagram:
+1. Architecture Design:
+   - Show complete system architecture with all components
+   - Include infrastructure and deployment details
+   - Map service dependencies and interactions
+   - Show scalability and redundancy patterns
+
+2. UI/UX Specification:
+   - Detail all UI states and transitions
+   - Show responsive design breakpoints
+   - Include accessibility considerations
+   - Map complete user journeys
+
+3. Technical Implementation:
+   - Detail API contracts and data formats
+   - Show security measures and auth flows
+   - Include performance optimization points
+   - Map database schemas and relationships
+
+4. Error Handling:
+   - Show all possible error states
+   - Include recovery mechanisms
+   - Map fallback scenarios
+   - Detail monitoring and alerting points
+
+5. Integration Patterns:
+   - Show external system integrations
+   - Include message queues and events
+   - Map data synchronization flows
+   - Detail API gateway patterns
+
+6. Development Considerations:
+   - Include versioning and deployment notes
+   - Show testing and validation points
+   - Map CI/CD pipeline steps
+   - Include documentation references
+
+` : ""}Specialized Requirements for ${suggestedType}:
 ${diagramPrompt}
 
 Follow these exact steps:
@@ -205,7 +281,7 @@ Follow these exact steps:
 2. Then, implement the diagram following this structure:
 ${diagramPrompt}
 
-3. Apply these complexity guidelines:
+3. Apply these complexity guidelines with special attention to UI/UX details:
 ${complexityGuidelines.join('\n')}
 
 4. Validate against official syntax:
@@ -221,6 +297,33 @@ Critical Requirements:
 4. Use proper arrow syntax
 5. Maintain consistent indentation
 6. No markdown or extra text
+${isComplex ? `7. Include Advanced Implementation Details:
+   - Show all technical components and their relationships
+   - Include complete error handling and recovery flows
+   - Detail security measures and compliance points
+   - Map performance optimization strategies
+   - Show scalability and redundancy patterns
+
+8. Comprehensive UI/UX Representation:
+   - Detail all possible component states
+   - Show interaction patterns and animations
+   - Include accessibility features
+   - Map responsive behaviors
+   - Show loading and error states
+
+9. System Integration Details:
+   - Map all external service integrations
+   - Show data flow and transformation points
+   - Include authentication and authorization flows
+   - Detail API contracts and formats
+   - Show monitoring and logging points
+
+10. Development and Operations:
+    - Include deployment architecture
+    - Show CI/CD pipeline steps
+    - Map testing and validation points
+    - Include documentation references
+    - Show versioning and update flows` : ""}
 
 Return only the Mermaid diagram code, no explanations.`;
   } else {
