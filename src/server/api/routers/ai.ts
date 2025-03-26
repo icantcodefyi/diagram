@@ -60,11 +60,10 @@ export const aiRouter = createTRPCRouter({
         while (attempts < maxAttempts) {
           try {
             const mermaidCode = await generateDiagramWithAI(
-              enhancedText ?? input.text, // Use enhanced text if available
+              enhancedText ?? input.text,
               suggestedType,
               attempts,
               input.isComplex,
-              lastError?.message ?? input.previousError,
             );
 
             if (typeof mermaidCode !== "string") {
